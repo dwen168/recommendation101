@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍫 巧克力商店智能推荐沙盒 Simulation</title>
+    <!-- Modern Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #120c08;       /* Deep rich dark chocolate */
+            --bg-card: rgba(30, 21, 16, 0.75); /* Translucent glass card */
+            --border-glow: rgba(212, 175, 55, 0.2); /* Warm gold border */
+            --accent-gold: #d4af37;      /* Warm golden accent */
+            --accent-gold-hover: #f3e5ab; /* Soft glowing gold */
+            --text-primary: #f5ebe6;     /* Cream white text */
+            --text-secondary: #c5b6b0;   /* Muted cocoa text */
+            --accent-loyalty: #2ecc71;   /* Emerald green badge */
+            --accent-regular: #a29bfe;   /* Purple regular badge */
+            --shadow-gold: 0 10px 40px 0 rgba(212, 175, 55, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(139, 90, 43, 0.2) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(212, 175, 55, 0.1) 0px, transparent 50%);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1, h2, h3, .brand-title {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            max-width: 800px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 30%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.6rem;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.15rem;
+            font-weight: 400;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1.1fr 2fr;
+            gap: 2.5rem;
+            max-width: 1200px;
+            width: 100%;
+            animation: fadeInUp 0.8s ease 0.1s both;
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glow);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow-gold);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(212, 175, 55, 0.35);
+            box-shadow: 0 16px 48px 0 rgba(212, 175, 55, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .panel-title {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 1.8rem;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+            padding-bottom: 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 1.8rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            background: rgba(18, 12, 8, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='%23d4af37' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+        }
+
+        select:focus {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+        }
+
+        /* Algorithm Selector Toggle */
+        .algo-selector {
+            display: flex;
+            background: rgba(18, 12, 8, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 14px;
+            padding: 0.35rem;
+            gap: 0.35rem;
+            margin-bottom: 1.8rem;
+            flex-wrap: wrap;
+        }
+
+        .algo-btn {
+            flex: 1 1 45%;
+            padding: 0.75rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .algo-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .algo-btn:hover:not(.active) {
+            color: var(--text-primary);
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        /* User Profile Subcard */
+        .profile-subcard {
+            background: rgba(18, 12, 8, 0.45);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px dashed rgba(212, 175, 55, 0.2);
+        }
+
+        .profile-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.7rem;
+            font-size: 0.95rem;
+        }
+
+        .profile-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .profile-row span:first-child {
+            color: var(--text-secondary);
+        }
+
+        .profile-row span:last-child {
+            font-weight: 600;
+        }
+
+        .badge-loyalty {
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--accent-loyalty);
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-regular {
+            background: rgba(162, 155, 254, 0.15);
+            color: var(--accent-regular);
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Recommended Grid */
+        .results-panel {
+            min-height: 520px;
+        }
+
+        .products-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .product-card {
+            background: rgba(18, 12, 8, 0.35);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 16px;
+            padding: 1.4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            animation: slideInRight 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) both;
+        }
+
+        .product-card:hover {
+            border-color: var(--accent-gold);
+            transform: translateX(10px);
+            background: rgba(30, 21, 16, 0.65);
+            box-shadow: 0 6px 24px rgba(212, 175, 55, 0.08);
+        }
+
+        .product-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .product-name-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .product-idx {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent-gold);
+        }
+
+        .product-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.2px;
+        }
+
+        .product-meta {
+            display: flex;
+            gap: 0.8rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .product-tag {
+            background: rgba(212, 175, 55, 0.12);
+            color: var(--accent-gold);
+            padding: 0.15rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .product-category {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.15rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .product-specs {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .spec-cocoa {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--accent-gold);
+        }
+
+        .spec-weight {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .spec-probability {
+            font-size: 0.8rem;
+            color: #2ecc71;
+            font-weight: 600;
+        }
+
+        /* Two Stage Pipeline Visualizer */
+        .pipeline-card {
+            background: rgba(212, 175, 55, 0.04);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 12px;
+            padding: 0.8rem 1.2rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .pipeline-step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pipeline-step-idx {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            font-weight: 800;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        /* Diagnostics Footnote */
+        .diagnostics {
+            border-top: 1px solid rgba(212, 175, 55, 0.15);
+            padding-top: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .diagnostic-pill {
+            background: rgba(18, 12, 8, 0.65);
+            padding: 0.4rem 0.9rem;
+            border-radius: 8px;
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .latency-value {
+            color: #2ecc71;
+            font-weight: 700;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🍫 巧克力商店智能推荐沙盒</h1>
+        <p>支持多算法对照、即时环境感知与工业级双级漏斗（召回+精排）架构的模拟器</p>
+    </header>
+
+    <div class="main-container">
+        <!-- Control Panel -->
+        <div class="glass-panel">
+            <div>
+                <h2 class="panel-title">⚙️ 控制中心</h2>
+                
+                <div class="form-group">
+                    <label>选择推荐架构</label>
+                    <div class="algo-selector">
+                        <button class="algo-btn active" id="btn-hybrid" onclick="selectAlgo('hybrid')">🔥 工业双级 (CF+LGBM)</button>
+                        <button class="algo-btn" id="btn-lgb" onclick="selectAlgo('lightgbm')">LightGBM</button>
+                        <button class="algo-btn" id="btn-xgb" onclick="selectAlgo('xgboost')">XGBoost</button>
+                        <button class="algo-btn" id="btn-cf" onclick="selectAlgo('itemcf')">ItemCF</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="user-select">模拟当前顾客</label>
+                    <select id="user-select" onchange="runRecommendation()">
+                        <!-- Populated in JS -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="store-select">当前购物渠道 / 门店</label>
+                    <select id="store-select" onchange="runRecommendation()">
+                        <!-- Populated in JS -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Customer Details Profile Subcard -->
+            <div class="profile-subcard">
+                <h3 style="font-size: 1rem; color: var(--accent-gold); margin-bottom: 0.9rem;">👤 顾客基本画像</h3>
+                <div class="profile-row">
+                    <span>顾客 ID:</span>
+                    <span id="profile-id">-</span>
+                </div>
+                <div class="profile-row">
+                    <span>年龄大小:</span>
+                    <span id="profile-age">-</span>
+                </div>
+                <div class="profile-row">
+                    <span>性别:</span>
+                    <span id="profile-gender">-</span>
+                </div>
+                <div class="profile-row">
+                    <span>会员身份:</span>
+                    <span id="profile-loyalty">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="glass-panel results-panel">
+            <div>
+                <h2 class="panel-title">🏆 智能为您推荐的 Top-5 巧克力</h2>
+                
+                <!-- Pipeline Visualizer for Hybrid Mode -->
+                <div class="pipeline-card" id="pipeline-visualizer" style="display:none;">
+                    <div class="pipeline-step">
+                        <span class="pipeline-step-idx">1</span>
+                        <span><strong>召回阶段 (ItemCF)</strong>：从商店 200+ 种商品中快速筛选出 <strong>10 个</strong> 最匹配的协同共现候选商品...</span>
+                    </div>
+                    <div class="pipeline-step">
+                        <span class="pipeline-step-idx">2</span>
+                        <span><strong>排序阶段 (LightGBM)</strong>：仅对这 10 个候选商品，融合当前顾客特征与店铺渠道进行精准二分类排序打分...</span>
+                    </div>
+                </div>
+
+                <div class="products-grid" id="products-list">
+                    <!-- Populated in JS -->
+                </div>
+            </div>
+
+            <!-- Diagnostics -->
+            <div class="diagnostics">
+                <div class="diagnostic-pill">架构/模型: <span id="diag-model" style="color: var(--accent-gold); font-weight:700;">-</span></div>
+                <div class="diagnostic-pill">购买渠道: <span id="diag-store" style="color: var(--accent-gold); font-weight:700;">-</span></div>
+                <div class="diagnostic-pill">推理延迟: <span class="latency-value" id="diag-latency">- ms</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Static Mock Datasets representing the Chocolate Shop database ---
+        const products = [
+            { id: "P0002", name: "Dark Chocolate 70%", brand: "Cadbury", category: "Praline", cocoa: 70, weight: 100 },
+            { id: "P0003", name: "Truffle Chocolate 70%", brand: "Hershey", category: "Praline", cocoa: 70, weight: 120 },
+            { id: "P0005", name: "White Chocolate 70%", brand: "Ferrero", category: "White", cocoa: 70, weight: 50 },
+            { id: "P0008", name: "White Chocolate 90%", brand: "Godiva", category: "Dark", cocoa: 90, weight: 100 },
+            { id: "P0011", name: "Praline Chocolate 90%", brand: "Ferrero", category: "Truffle", cocoa: 90, weight: 80 },
+            { id: "P0012", name: "Truffle Chocolate 80%", brand: "Mars", category: "Praline", cocoa: 80, weight: 200 },
+            { id: "P0015", name: "Dark Chocolate 50%", brand: "Ferrero", category: "Praline", cocoa: 50, weight: 50 },
+            { id: "P0025", name: "Praline Chocolate 90%", brand: "Lindt", category: "Truffle", cocoa: 90, weight: 120 },
+            { id: "P0028", name: "Dark Chocolate 50%", brand: "Lindt", category: "Dark", cocoa: 50, weight: 200 },
+            { id: "P0030", name: "Praline Chocolate 90%", brand: "Lindt", category: "Praline", cocoa: 90, weight: 120 },
+            { id: "P0043", name: "Truffle Chocolate 90%", brand: "Lindt", category: "Praline", cocoa: 90, weight: 200 },
+            { id: "P0051", name: "Milk Chocolate 80%", brand: "Lindt", category: "Truffle", cocoa: 80, weight: 200 },
+            { id: "P0062", name: "Truffle Chocolate 80%", brand: "Mars", category: "Dark", cocoa: 80, weight: 120 },
+            { id: "P0070", name: "White Chocolate 90%", brand: "Ferrero", category: "Milk", cocoa: 90, weight: 200 },
+            { id: "P0104", name: "Praline Chocolate 80%", brand: "Godiva", category: "Truffle", cocoa: 80, weight: 120 }
+        ];
+
+        const customers = [
+            { id: "C000001", age: 40, gender: "Male", loyalty: 1 },
+            { id: "C000003", age: 58, gender: "Female", loyalty: 1 },
+            { id: "C000004", age: 25, gender: "Female", loyalty: 0 },
+            { id: "C000009", age: 18, gender: "Male", loyalty: 0 },
+            { id: "C000012", age: 53, gender: "Male", loyalty: 1 },
+            { id: "C000014", age: 32, gender: "Female", loyalty: 1 },
+            { id: "C000015", age: 61, gender: "Female", loyalty: 1 },
+            { id: "C000017", age: 29, gender: "Male", loyalty: 0 },
+            { id: "C000025", age: 33, gender: "Male", loyalty: 0 },
+            { id: "C000029", age: 54, gender: "Female", loyalty: 0 }
+        ];
+
+        const stores = [
+            { id: "S001", type: "Airport", name: "机场旗舰店", city: "墨尔本" },
+            { id: "S005", type: "Online", name: "官方线上商城", city: "全球" },
+            { id: "S016", type: "Mall", name: "超级商业广场店", city: "悉尼" },
+            { id: "S022", type: "Retail", name: "社区街边零售店", city: "柏林" }
+        ];
+
+        // --- 2. Embedded logic simulating the trained models ---
+        let selectedModel = "hybrid";
+
+        function selectAlgo(model) {
+            selectedModel = model;
+            document.querySelectorAll('.algo-btn').forEach(btn => btn.classList.remove('active'));
+            if (model === 'hybrid') document.getElementById('btn-hybrid').classList.add('active');
+            if (model === 'lightgbm') document.getElementById('btn-lgb').classList.add('active');
+            if (model === 'xgboost') document.getElementById('btn-xgb').classList.add('active');
+            if (model === 'itemcf') document.getElementById('btn-cf').classList.add('active');
+            
+            runRecommendation();
+        }
+
+        // Initialize lists
+        function init() {
+            const userSelect = document.getElementById('user-select');
+            userSelect.innerHTML = customers.map(c => 
+                `<option value="${c.id}">${c.id} (${c.gender === 'Male' ? '男' : '女'}，${c.age}岁)</option>`
+            ).join('');
+
+            const storeSelect = document.getElementById('store-select');
+            storeSelect.innerHTML = stores.map(s => 
+                `<option value="${s.id}">${s.type} - ${s.name} (${s.city})</option>`
+            ).join('');
+
+            runRecommendation();
+        }
+
+        // Simulates scoring for ItemCF
+        function getItemCFScore(p, user) {
+            let score = 0;
+            if (p.id === 'P0002') score += 8.5; 
+            if (p.id === 'P0015') score += 7.8;
+            if (p.id === 'P0012') score += 7.2;
+            if (p.id === 'P0030') score += 6.5;
+            if (p.id === 'P0070') score += 6.2;
+            if (p.id === 'P0003') score += 5.8;
+            if (p.id === 'P0051') score += 5.5;
+            if (p.id === 'P0025') score += 5.1;
+            if (p.id === 'P0028') score += 4.8;
+            if (p.id === 'P0104') score += 4.5;
+            
+            // Add deterministic noise
+            score += (p.cocoa % 7) * 0.1;
+            return score;
+        }
+
+        // Simulates scoring for GBDT (XGBoost/LightGBM)
+        function getGBDTScore(p, user, store) {
+            let score = 0;
+            
+            // Base item popularity
+            if (p.id === 'P0015') score += 4.0; 
+            if (p.id === 'P0012') score += 3.5; 
+            
+            // Store type affinity
+            if (store.type === 'Airport') {
+                if (p.category === 'Truffle') score += 3.0;
+                if (p.brand === 'Godiva' || p.brand === 'Ferrero') score += 2.5;
+                if (p.weight >= 120) score += 2.0;
+            } else if (store.type === 'Online') {
+                if (p.category === 'Dark' || p.category === 'Milk') score += 2.8;
+                if (p.cocoa >= 80) score += 1.8;
+            } else if (store.type === 'Mall') {
+                if (p.category === 'White' || p.category === 'Praline') score += 2.5;
+            }
+            
+            // Demographic affinity
+            if (user.age >= 50) {
+                if (p.cocoa >= 80) score += 3.5;
+                if (p.category === 'Dark') score += 2.0;
+            } else {
+                if (p.cocoa <= 70) score += 2.5;
+                if (p.category === 'White' || p.category === 'Praline') score += 2.0;
+            }
+            
+            if (user.gender === 'Female') {
+                if (p.category === 'Truffle' || p.category === 'Praline') score += 1.5;
+            }
+            
+            // Loyalty affinity
+            if (user.loyalty === 1) {
+                if (p.brand === 'Lindt' || p.brand === 'Godiva') score += 2.0;
+            }
+            
+            return score;
+        }
+
+        function runRecommendation() {
+            const userId = document.getElementById('user-select').value;
+            const storeId = document.getElementById('store-select').value;
+            
+            const user = customers.find(c => c.id === userId);
+            const store = stores.find(s => s.id === storeId);
+            
+            if (!user || !store) return;
+
+            // 1. Update Profile Subcard
+            document.getElementById('profile-id').innerText = user.id;
+            document.getElementById('profile-age').innerText = `${user.age} 岁`;
+            document.getElementById('profile-gender').innerText = user.gender === 'Male' ? '男' : '女';
+            document.getElementById('profile-loyalty').innerHTML = user.loyalty === 1
+                ? `<span class="badge-loyalty">Loyalty Member</span>`
+                : `<span class="badge-regular">Regular</span>`;
+
+            // Display pipeline visualizer in hybrid mode
+            const pipeVis = document.getElementById('pipeline-visualizer');
+            if (selectedModel === 'hybrid') {
+                pipeVis.style.display = 'flex';
+            } else {
+                pipeVis.style.display = 'none';
+            }
+
+            // 2. Core Recommendation Engine Simulator
+            const t0 = performance.now();
+            let scoredProducts = [];
+            let latency = 0;
+
+            if (selectedModel === 'itemcf') {
+                // Single Model: ItemCF on all 200 items
+                scoredProducts = products.map(p => {
+                    const score = getItemCFScore(p, user);
+                    return { product: p, score: score, probability: null };
+                });
+                latency = 0.14 + (Math.random() * 0.05); // ~0.18ms
+            } 
+            else if (selectedModel === 'lightgbm') {
+                // Single Model: LightGBM on all 200 items
+                scoredProducts = products.map(p => {
+                    const score = getGBDTScore(p, user, store);
+                    const probability = 1 / (1 + Math.exp(-score + 4.5));
+                    return { product: p, score: score, probability: probability };
+                });
+                latency = 2.18 + (Math.random() * 0.25); // ~2.39ms
+            } 
+            else if (selectedModel === 'xgboost') {
+                // Single Model: XGBoost on all 200 items
+                scoredProducts = products.map(p => {
+                    const score = getGBDTScore(p, user, store) - 0.1; // slightly different weight
+                    const probability = 1 / (1 + Math.exp(-score + 4.5));
+                    return { product: p, score: score, probability: probability };
+                });
+                latency = 2.45 + (Math.random() * 0.2); // ~2.58ms
+            } 
+            else if (selectedModel === 'hybrid') {
+                // 🔥 INDUSTRIAL TWO-STAGE PIPELINE (CF + LGBM) 🔥
+                
+                // STAGE 1: Retrieval (召回) via ItemCF
+                // We score all items using ItemCF and retrieve the Top 10 items
+                const retrieved = products.map(p => {
+                    const score = getItemCFScore(p, user);
+                    return { product: p, cf_score: score };
+                }).sort((a, b) => b.cf_score - a.cf_score).slice(0, 10);
+                
+                // STAGE 2: Ranking (精排) via LightGBM
+                // We only run LightGBM on the 10 retrieved candidates!
+                scoredProducts = retrieved.map(item => {
+                    const p = item.product;
+                    const score = getGBDTScore(p, user, store);
+                    const probability = 1 / (1 + Math.exp(-score + 4.5));
+                    return { product: p, score: score, probability: probability };
+                });
+                
+                // Latency benefits: running GBDT on 10 items instead of 200 items!
+                const cf_latency = 0.12 + (Math.random() * 0.03); // ItemCF retrieval latency
+                const lgb_latency = 0.28 + (Math.random() * 0.05); // LightGBM ranking latency on 10 items
+                latency = cf_latency + lgb_latency; // Total ~0.45ms!
+            }
+
+            // Sort products by final score descending
+            scoredProducts.sort((a, b) => b.score - a.score);
+            const top5 = scoredProducts.slice(0, 5);
+
+            // 3. Render Results Grid
+            const listEl = document.getElementById('products-list');
+            listEl.innerHTML = top5.map((item, idx) => `
+                <div class="product-card" style="animation-delay: ${idx * 0.06}s">
+                    <div class="product-info">
+                        <div class="product-name-row">
+                            <span class="product-idx">#${idx + 1}</span>
+                            <span class="product-name">${item.product.name}</span>
+                        </div>
+                        <div class="product-meta">
+                            <span class="product-tag">${item.product.brand}</span>
+                            <span class="product-category">${item.product.category}</span>
+                        </div>
+                    </div>
+                    <div class="product-specs">
+                        <div class="spec-cocoa">${item.product.cocoa}% 可可</div>
+                        <div class="spec-weight">${item.product.weight}g</div>
+                        ${item.probability ? `<div class="spec-probability">购买意愿: ${(item.probability * 100).toFixed(1)}%</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // 4. Update Diagnostics
+            const modelLabel = selectedModel === 'hybrid' ? "TWO-STAGE (CF + LGBM)" : selectedModel.toUpperCase();
+            document.getElementById('diag-model').innerText = modelLabel;
+            document.getElementById('diag-store').innerText = store.type.toUpperCase();
+            document.getElementById('diag-latency').innerHTML = selectedModel === 'hybrid' 
+                ? `<span class="latency-value">${latency.toFixed(4)} ms</span> <span style="font-size:0.75rem; color:var(--text-secondary)">(0.12ms 召回 + 0.32ms 精排)</span>`
+                : `<span class="latency-value">${latency.toFixed(4)} ms</span>`;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

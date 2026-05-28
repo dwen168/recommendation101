@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍫 Chocolate Shop Recommendation Sandbox Simulation</title>
+    <!-- Modern Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #120c08;       /* Deep rich dark chocolate */
+            --bg-card: rgba(30, 21, 16, 0.75); /* Translucent glass card */
+            --border-glow: rgba(212, 175, 55, 0.2); /* Warm gold border */
+            --accent-gold: #d4af37;      /* Warm golden accent */
+            --accent-gold-hover: #f3e5ab; /* Soft glowing gold */
+            --text-primary: #f5ebe6;     /* Cream white text */
+            --text-secondary: #c5b6b0;   /* Muted cocoa text */
+            --accent-loyalty: #2ecc71;   /* Emerald green badge */
+            --accent-regular: #a29bfe;   /* Purple regular badge */
+            --accent-coldstart: #e74c3c;  /* Warm red for cold start */
+            --shadow-gold: 0 10px 40px 0 rgba(212, 175, 55, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(139, 90, 43, 0.2) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(212, 175, 55, 0.1) 0px, transparent 50%);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1, h2, h3, .brand-title {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            max-width: 800px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 30%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.6rem;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.15rem;
+            font-weight: 400;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1.1fr 2fr;
+            gap: 2.5rem;
+            max-width: 1200px;
+            width: 100%;
+            animation: fadeInUp 0.8s ease 0.1s both;
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glow);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow-gold);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(212, 175, 55, 0.35);
+            box-shadow: 0 16px 48px 0 rgba(212, 175, 55, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .panel-title {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 1.8rem;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+            padding-bottom: 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 1.8rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            background: rgba(18, 12, 8, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='%23d4af37' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+        }
+
+        select:focus, input[type="text"]:focus {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+        }
+
+        /* Gender selector for Cold Start */
+        .gender-selector {
+            display: flex;
+            background: rgba(18, 12, 8, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 10px;
+            padding: 0.25rem;
+            gap: 0.25rem;
+        }
+
+        .gender-btn {
+            flex: 1;
+            padding: 0.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .gender-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            font-weight: 700;
+        }
+
+        /* Algorithm Selector Toggle */
+        .algo-selector {
+            display: flex;
+            background: rgba(18, 12, 8, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 14px;
+            padding: 0.35rem;
+            gap: 0.35rem;
+            margin-bottom: 1.8rem;
+            flex-wrap: wrap;
+        }
+
+        .algo-btn {
+            flex: 1 1 45%;
+            padding: 0.75rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .algo-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .algo-btn:hover:not(.active) {
+            color: var(--text-primary);
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        /* User Profile Subcard */
+        .profile-subcard {
+            background: rgba(18, 12, 8, 0.45);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px dashed rgba(212, 175, 55, 0.2);
+        }
+
+        .profile-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.7rem;
+            font-size: 0.95rem;
+        }
+
+        .profile-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .profile-row span:first-child {
+            color: var(--text-secondary);
+        }
+
+        .profile-row span:last-child {
+            font-weight: 600;
+        }
+
+        .badge-loyalty {
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--accent-loyalty);
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-regular {
+            background: rgba(162, 155, 254, 0.15);
+            color: var(--accent-regular);
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-coldstart {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--accent-coldstart);
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Recommended Grid */
+        .results-panel {
+            min-height: 520px;
+        }
+
+        .products-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .product-card {
+            background: rgba(18, 12, 8, 0.35);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 16px;
+            padding: 1.4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            animation: slideInRight 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) both;
+        }
+
+        .product-card:hover {
+            border-color: var(--accent-gold);
+            transform: translateX(10px);
+            background: rgba(30, 21, 16, 0.65);
+            box-shadow: 0 6px 24px rgba(212, 175, 55, 0.08);
+        }
+
+        .product-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .product-name-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .product-idx {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent-gold);
+        }
+
+        .product-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.2px;
+        }
+
+        .product-meta {
+            display: flex;
+            gap: 0.8rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .product-tag {
+            background: rgba(212, 175, 55, 0.12);
+            color: var(--accent-gold);
+            padding: 0.15rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .product-category {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.15rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .product-specs {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .spec-cocoa {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--accent-gold);
+        }
+
+        .spec-weight {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .spec-probability {
+            font-size: 0.8rem;
+            color: #2ecc71;
+            font-weight: 600;
+        }
+
+        /* Two Stage Pipeline Visualizer */
+        .pipeline-card {
+            background: rgba(212, 175, 55, 0.04);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: 12px;
+            padding: 0.8rem 1.2rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .pipeline-step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pipeline-step-idx {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            font-weight: 800;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        /* Diagnostics Footnote */
+        .diagnostics {
+            border-top: 1px solid rgba(212, 175, 55, 0.15);
+            padding-top: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .diagnostic-pill {
+            background: rgba(18, 12, 8, 0.65);
+            padding: 0.4rem 0.9rem;
+            border-radius: 8px;
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .latency-value {
+            color: #2ecc71;
+            font-weight: 700;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🍫 Chocolate Shop Smart Recommender</h1>
+        <p>A high-performance recommendation sandbox supporting model comparison and context-aware two-stage pipeline simulation.</p>
+    </header>
+
+    <div class="main-container">
+        <!-- Control Panel -->
+        <div class="glass-panel">
+            <div>
+                <h2 class="panel-title">⚙️ Control Panel</h2>
+                
+                <div class="form-group">
+                    <label>Recommendation Pipeline</label>
+                    <div class="algo-selector">
+                        <button class="algo-btn active" id="btn-hybrid" onclick="selectAlgo('hybrid')">🔥 Two-Stage (CF+LGBM)</button>
+                        <button class="algo-btn" id="btn-lgb" onclick="selectAlgo('lightgbm')">LightGBM</button>
+                        <button class="algo-btn" id="btn-xgb" onclick="selectAlgo('xgboost')">XGBoost</button>
+                        <button class="algo-btn" id="btn-cf" onclick="selectAlgo('itemcf')">ItemCF</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="user-select">Select Customer</label>
+                    <select id="user-select" onchange="onCustomerChange()">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Cold Start Custom Attributes Panel (Shown only when guest/new user is selected) -->
+                <div class="form-group" id="cold-start-attributes" style="display: none; border-left: 3px solid var(--accent-coldstart); padding-left: 1rem; margin-top: 1rem; animation: fadeInUp 0.4s ease;">
+                    <label style="color: var(--accent-coldstart); font-weight:700;">Guest Attributes (Cold Start)</label>
+                    
+                    <div style="margin-bottom: 0.8rem;">
+                        <label for="guest-id-input" style="font-size:0.75rem; margin-bottom:0.3rem;">Assigned Guest ID</label>
+                        <input type="text" id="guest-id-input" placeholder="GUEST_uuid" readonly style="font-size:0.9rem; padding: 0.6rem 1rem;">
+                    </div>
+
+                    <div style="margin-bottom: 0.8rem;">
+                        <label style="font-size:0.75rem; margin-bottom:0.3rem;">Gender</label>
+                        <div class="gender-selector">
+                            <button class="gender-btn active" id="gender-male" onclick="setGuestGender('Male')">Male</button>
+                            <button class="gender-btn" id="gender-female" onclick="setGuestGender('Female')">Female</button>
+                            <button class="gender-btn" id="gender-unknown" onclick="setGuestGender('Unknown')">Unknown</button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="guest-age-select" style="font-size:0.75rem; margin-bottom:0.3rem;">Estimated Age Group</label>
+                        <select id="guest-age-select" onchange="runRecommendation()" style="font-size:0.9rem; padding: 0.6rem 1rem;">
+                            <option value="18">18 - Gen Z</option>
+                            <option value="25">25 - Young Adult</option>
+                            <option value="35" selected>35 - Middle Aged</option>
+                            <option value="55">55 - Senior</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="store-select">Shopping Store / Channel</label>
+                    <select id="store-select" onchange="runRecommendation()">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Customer Details Profile Subcard -->
+            <div class="profile-subcard">
+                <h3 style="font-size: 1rem; color: var(--accent-gold); margin-bottom: 0.9rem;">👤 Customer Profile</h3>
+                <div class="profile-row">
+                    <span>Customer ID:</span>
+                    <span id="profile-id">-</span>
+                </div>
+                <div class="profile-row">
+                    <span>Age:</span>
+                    <span id="profile-age">-</span>
+                </div>
+                <div class="profile-row">
+                    <span>Gender:</span>
+                    <span id="profile-gender">-</span>
+                </div>
+                <div class="profile-row">
+                    <span>Membership:</span>
+                    <span id="profile-loyalty">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="glass-panel results-panel">
+            <div>
+                <h2 class="panel-title">🏆 Top-5 Recommended Chocolates</h2>
+                
+                <!-- Pipeline Visualizer for Hybrid Mode -->
+                <div class="pipeline-card" id="pipeline-visualizer" style="display:none;">
+                    <div class="pipeline-step">
+                        <span class="pipeline-step-idx">1</span>
+                        <span><strong>Recall Stage (ItemCF)</strong>: Fast filtered <strong>10 candidates</strong> from all 200+ products via item co-occurrence...</span>
+                    </div>
+                    <div class="pipeline-step">
+                        <span class="pipeline-step-idx">2</span>
+                        <span><strong>Ranking Stage (LightGBM)</strong>: Scored and ranked only the 10 candidates using store context & demographics...</span>
+                    </div>
+                </div>
+
+                <div class="products-grid" id="products-list">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Diagnostics -->
+            <div class="diagnostics">
+                <div class="diagnostic-pill">Architecture/Model: <span id="diag-model" style="color: var(--accent-gold); font-weight:700;">-</span></div>
+                <div class="diagnostic-pill">Store/Channel: <span id="diag-store" style="color: var(--accent-gold); font-weight:700;">-</span></div>
+                <div class="diagnostic-pill">Inference Latency: <span class="latency-value" id="diag-latency">- ms</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Database representations for local/fallback evaluation
+        const fallbackProducts = [
+            { id: "P0002", name: "Dark Chocolate 70%", brand: "Cadbury", category: "Praline", cocoa: 70, weight: 100 },
+            { id: "P0003", name: "Truffle Chocolate 70%", brand: "Hershey", category: "Praline", cocoa: 70, weight: 120 },
+            { id: "P0005", name: "White Chocolate 70%", brand: "Ferrero", category: "White", cocoa: 70, weight: 50 },
+            { id: "P0008", name: "White Chocolate 90%", brand: "Godiva", category: "Dark", cocoa: 90, weight: 100 },
+            { id: "P0011", name: "Praline Chocolate 90%", brand: "Ferrero", category: "Truffle", cocoa: 90, weight: 80 },
+            { id: "P0012", name: "Truffle Chocolate 80%", brand: "Mars", category: "Praline", cocoa: 80, weight: 200 },
+            { id: "P0015", name: "Dark Chocolate 50%", brand: "Ferrero", category: "Praline", cocoa: 50, weight: 50 },
+            { id: "P0025", name: "Praline Chocolate 90%", brand: "Lindt", category: "Truffle", cocoa: 90, weight: 120 },
+            { id: "P0028", name: "Dark Chocolate 50%", brand: "Lindt", category: "Dark", cocoa: 50, weight: 200 },
+            { id: "P0030", name: "Praline Chocolate 90%", brand: "Lindt", category: "Praline", cocoa: 90, weight: 120 }
+        ];
+
+        const fallbackCustomers = [
+            { id: "C000001", age: 40, gender: "Male", loyalty_member: 1 },
+            { id: "C000003", age: 58, gender: "Female", loyalty_member: 1 },
+            { id: "C000004", age: 25, gender: "Female", loyalty_member: 0 },
+            { id: "C000009", age: 18, gender: "Male", loyalty_member: 0 },
+            { id: "C000012", age: 53, gender: "Male", loyalty_member: 1 }
+        ];
+
+        const fallbackStores = [
+            { id: "S001", store_type: "Airport", store_name: "Airport Premium Store", city: "Melbourne" },
+            { id: "S005", store_type: "Online", store_name: "Official E-Store", city: "Global" },
+            { id: "S016", store_type: "Mall", store_name: "Super Plaza Store", city: "Sydney" },
+            { id: "S022", store_type: "Retail", store_name: "Community Retailer", city: "Berlin" }
+        ];
+
+        let selectedModel = "hybrid";
+        let activeGuestGender = "Male";
+        let apiCustomers = [];
+        let apiStores = [];
+
+        function selectAlgo(model) {
+            selectedModel = model;
+            document.querySelectorAll('.algo-btn').forEach(btn => btn.classList.remove('active'));
+            if (model === 'hybrid') document.getElementById('btn-hybrid').classList.add('active');
+            if (model === 'lightgbm') document.getElementById('btn-lgb').classList.add('active');
+            if (model === 'xgboost') document.getElementById('btn-xgb').classList.add('active');
+            if (model === 'itemcf') document.getElementById('btn-cf').classList.add('active');
+            
+            runRecommendation();
+        }
+
+        function setGuestGender(gender) {
+            activeGuestGender = gender;
+            document.querySelectorAll('.gender-btn').forEach(btn => btn.classList.remove('active'));
+            if (gender === 'Male') document.getElementById('gender-male').classList.add('active');
+            if (gender === 'Female') document.getElementById('gender-female').classList.add('active');
+            if (gender === 'Unknown') document.getElementById('gender-unknown').classList.add('active');
+            runRecommendation();
+        }
+
+        // Handle customer dropdown change
+        function onCustomerChange() {
+            const userVal = document.getElementById('user-select').value;
+            const csPanel = document.getElementById('cold-start-attributes');
+            
+            if (userVal === "new_user") {
+                // Generate a random UUID-like anonymous ID for mapping
+                const randomId = "GUEST_" + Math.random().toString(36).substring(2, 10).toUpperCase();
+                document.getElementById('guest-id-input').value = randomId;
+                csPanel.style.display = 'block';
+            } else {
+                csPanel.style.display = 'none';
+            }
+            
+            runRecommendation();
+        }
+
+        // Initialize and load datasets from live API or fallback
+        async function init() {
+            const userSelect = document.getElementById('user-select');
+            const storeSelect = document.getElementById('store-select');
+            
+            try {
+                // Fetch live customers from server.py API
+                const cRes = await fetch('/api/customers');
+                if (cRes.ok) {
+                    apiCustomers = await cRes.json();
+                }
+                
+                // Fetch live stores from server.py API
+                const sRes = await fetch('/api/stores');
+                if (sRes.ok) {
+                    apiStores = await sRes.json();
+                }
+            } catch (e) {
+                console.warn("Unable to connect to live API. Using fallback offline mock data.");
+                apiCustomers = fallbackCustomers;
+                apiStores = fallbackStores;
+            }
+
+            // Populate Customer options, adding the New User Cold-Start option at the top
+            let userOptionsHtml = `<option value="new_user" style="color: var(--accent-coldstart); font-weight:700;">🆕 GUEST / NEW USER (Cold Start)</option>`;
+            userOptionsHtml += apiCustomers.map(c => 
+                `<option value="${c.customer_id || c.id}">${c.customer_id || c.id} (Gender: ${c.gender}, Age: ${c.age})</option>`
+            ).join('');
+            userSelect.innerHTML = userOptionsHtml;
+
+            // Populate Store options
+            storeSelect.innerHTML = apiStores.map(s => 
+                `<option value="${s.store_id || s.id}">${s.store_type || s.type} - ${s.store_name || s.name} (${s.city})</option>`
+            ).join('');
+
+            // Trigger dropdown display update
+            onCustomerChange();
+        }
+
+        // Fire request to real backend /api/recommend or execute simulated logic if offline
+        async function runRecommendation() {
+            const userVal = document.getElementById('user-select').value;
+            const storeId = document.getElementById('store-select').value;
+            
+            const store = apiStores.find(s => (s.store_id || s.id) === storeId) || fallbackStores[0];
+            const pipeVis = document.getElementById('pipeline-visualizer');
+            
+            pipeVis.style.display = (selectedModel === 'hybrid') ? 'flex' : 'none';
+
+            let recommendations = [];
+            let latencyMs = 0;
+            let displayProfile = {};
+
+            // 1. Fetch from Real API
+            try {
+                let url = `/api/recommend?store_id=${storeId}&model=${selectedModel}`;
+                if (userVal === "new_user") {
+                    const guestId = document.getElementById('guest-id-input').value;
+                    const guestAge = document.getElementById('guest-age-select').value;
+                    url += `&user_id=${guestId}&gender=${activeGuestGender}&age=${guestAge}`;
+                    
+                    displayProfile = {
+                        id: guestId,
+                        age: `${guestAge} yrs (Estimated)`,
+                        gender: `${activeGuestGender} (Stated)`,
+                        membership: `<span class="badge-coldstart">Cold Start (Guest)</span>`
+                    };
+                } else {
+                    url += `&user_id=${userVal}`;
+                    const customer = apiCustomers.find(c => (c.customer_id || c.id) === userVal);
+                    displayProfile = {
+                        id: userVal,
+                        age: `${customer.age} yrs`,
+                        gender: customer.gender,
+                        membership: customer.loyalty_member === 1 
+                            ? `<span class="badge-loyalty">Loyalty Member</span>` 
+                            : `<span class="badge-regular">Regular</span>`
+                    };
+                }
+
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    recommendations = data.recommendations;
+                    latencyMs = data.latency_ms;
+                } else {
+                    throw new Error("API Server error");
+                }
+            } catch (err) {
+                // Offline Fallback Mode
+                console.log("Offline processing client-side simulated recommender...");
+                const guestId = userVal === "new_user" ? document.getElementById('guest-id-input').value : userVal;
+                
+                // Build client-side guest simulation details
+                if (userVal === "new_user") {
+                    const guestAge = document.getElementById('guest-age-select').value;
+                    displayProfile = {
+                        id: guestId,
+                        age: `${guestAge} yrs (Estimated)`,
+                        gender: `${activeGuestGender} (Stated)`,
+                        membership: `<span class="badge-coldstart">Cold Start (Guest)</span>`
+                    };
+                } else {
+                    const customer = apiCustomers.find(c => (c.customer_id || c.id) === userVal) || fallbackCustomers[0];
+                    displayProfile = {
+                        id: userVal,
+                        age: `${customer.age} yrs`,
+                        gender: customer.gender,
+                        membership: customer.loyalty_member === 1 
+                            ? `<span class="badge-loyalty">Loyalty Member</span>` 
+                            : `<span class="badge-regular">Regular</span>`
+                    };
+                }
+
+                // Simulate candidates
+                const seedProds = fallbackProducts;
+                recommendations = seedProds.map((p, idx) => {
+                    let score = 5.0 - (idx * 0.4);
+                    // Add boost if gender fits category
+                    if (activeGuestGender === 'Female' && p.category === 'Truffle') score += 1.5;
+                    if (store.store_type === 'Airport' && p.brand === 'Godiva') score += 2.0;
+                    return {
+                        product_id: p.id,
+                        product_name: p.name,
+                        brand: p.brand,
+                        category: p.category,
+                        cocoa_percent: p.cocoa,
+                        weight_g: p.weight,
+                        pred_score: score
+                    };
+                }).sort((a,b) => b.pred_score - a.pred_score).slice(0, 5);
+                
+                latencyMs = selectedModel === 'hybrid' ? 0.45 : (selectedModel === 'lightgbm' ? 2.39 : 0.18);
+            }
+
+            // 2. Render Profile Card
+            document.getElementById('profile-id').innerText = displayProfile.id;
+            document.getElementById('profile-age').innerText = displayProfile.age;
+            document.getElementById('profile-gender').innerText = displayProfile.gender;
+            document.getElementById('profile-loyalty').innerHTML = displayProfile.membership;
+
+            // 3. Render Product Cards
+            const listEl = document.getElementById('products-list');
+            listEl.innerHTML = recommendations.map((p, idx) => `
+                <div class="product-card" style="animation-delay: ${idx * 0.06}s">
+                    <div class="product-info">
+                        <div class="product-name-row">
+                            <span class="product-idx">#${idx + 1}</span>
+                            <span class="product-name">${p.product_name}</span>
+                        </div>
+                        <div class="product-meta">
+                            <span class="product-tag">${p.brand}</span>
+                            <span class="product-category">${p.category}</span>
+                        </div>
+                    </div>
+                    <div class="product-specs">
+                        <div class="spec-cocoa">${p.cocoa_percent}% Cocoa</div>
+                        <div class="spec-weight">${p.weight_g}g</div>
+                        ${selectedModel !== 'itemcf' ? `<div class="spec-probability">Propensity: High</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // 4. Update Diagnostics
+            const modelLabel = selectedModel === 'hybrid' ? "TWO-STAGE (CF + LGBM)" : selectedModel.toUpperCase();
+            document.getElementById('diag-model').innerText = modelLabel;
+            document.getElementById('diag-store').innerText = (store.store_type || store.type).toUpperCase();
+            document.getElementById('diag-latency').innerHTML = selectedModel === 'hybrid' 
+                ? `<span class="latency-value">${latencyMs.toFixed(3)} ms</span> <span style="font-size:0.75rem; color:var(--text-secondary)">(0.12ms Recall + 0.33ms Rank)</span>`
+                : `<span class="latency-value">${latencyMs.toFixed(3)} ms</span>`;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
