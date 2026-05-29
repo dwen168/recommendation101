@@ -477,7 +477,7 @@
 
     <div class="main-container">
         <!-- Control Panel -->
-        <div class="glass-panel">
+        <div class="glass-panel" style="height: fit-content;">
             <div>
                 <h2 class="panel-title">⚙️ Control Panel</h2>
                 
@@ -488,6 +488,7 @@
                         <button class="algo-btn" id="btn-lgb" onclick="selectAlgo('lightgbm')">LightGBM</button>
                         <button class="algo-btn" id="btn-xgb" onclick="selectAlgo('xgboost')">XGBoost</button>
                         <button class="algo-btn" id="btn-cf" onclick="selectAlgo('itemcf')">ItemCF</button>
+                        <button class="algo-btn" id="btn-mba" onclick="selectAlgo('mba')">Association Rules (MBA)</button>
                     </div>
                 </div>
 
@@ -536,7 +537,7 @@
             </div>
 
             <!-- Customer Details Profile Subcard -->
-            <div class="profile-subcard">
+            <div class="profile-subcard" style="margin-top: 1rem;">
                 <h3 style="font-size: 1rem; color: var(--accent-gold); margin-bottom: 0.9rem;">👤 Customer Profile</h3>
                 <div class="profile-row">
                     <span>Customer ID:</span>
@@ -558,7 +559,7 @@
         </div>
 
         <!-- Results Panel -->
-        <div class="glass-panel results-panel">
+        <div class="glass-panel results-panel" style="height: fit-content;">
             <div>
                 <h2 class="panel-title">🏆 Top-5 Recommended Chocolates</h2>
                 
@@ -580,16 +581,31 @@
             </div>
 
             <!-- Diagnostics -->
-            <div class="diagnostics">
+            <div class="diagnostics" style="margin-top: 1.5rem;">
                 <div class="diagnostic-pill">Architecture/Model: <span id="diag-model" style="color: var(--accent-gold); font-weight:700;">-</span></div>
                 <div class="diagnostic-pill">Store/Channel: <span id="diag-store" style="color: var(--accent-gold); font-weight:700;">-</span></div>
                 <div class="diagnostic-pill">Inference Latency: <span class="latency-value" id="diag-latency">- ms</span></div>
             </div>
         </div>
+
+        <!-- Model Encyclopedia Knowledge Board (Full Width Bottom Dashboard) -->
+        <div class="glass-panel" style="grid-column: 1 / -1; margin-top: 0rem; animation: fadeInUp 0.8s ease 0.2s both;">
+            <h2 class="panel-title" style="margin-bottom: 1.2rem; border-bottom: 1px solid rgba(212, 175, 55, 0.15); padding-bottom: 0.6rem;">💡 Recommendation Model Encyclopedia (Model Guide)</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; align-items: start;">
+                <div>
+                    <h3 style="font-size: 1.15rem; color: var(--accent-gold); margin-bottom: 0.6rem; font-weight: 700;" id="helper-title">Model Guide</h3>
+                    <p id="helper-desc" style="font-size: 0.92rem; color: var(--text-primary); line-height: 1.6; font-weight: 400;">-</p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.8rem; font-size: 0.9rem; line-height: 1.5; border-left: 1px solid rgba(212, 175, 55, 0.15); padding-left: 2rem;">
+                    <div><span style="color: #2ecc71; font-weight: 700; display: inline-block; width: 100px;">🟢 Pros:</span><span id="helper-pros" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; display: inline;">-</span></div>
+                    <div style="margin-top: 0.4rem;"><span style="color: #e74c3c; font-weight: 700; display: inline-block; width: 100px;">🔴 Cons:</span><span id="helper-cons" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; display: inline;">-</span></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Database representations for local/fallback evaluation
+        // Database representations for local/fallback evaluation (Offline Fallback)
         const fallbackProducts = [
             { id: "P0002", name: "Dark Chocolate 70%", brand: "Cadbury", category: "Praline", cocoa: 70, weight: 100 },
             { id: "P0003", name: "Truffle Chocolate 70%", brand: "Hershey", category: "Praline", cocoa: 70, weight: 120 },
@@ -623,6 +639,39 @@
         let apiCustomers = [];
         let apiStores = [];
 
+        const modelDetails = {
+            hybrid: {
+                title: "🔥 Two-Stage Cascade (Hybrid)",
+                desc: "The industry-standard architecture. Stage 1 (Retrieval) uses ItemCF to instantly filter down a massive catalog to 10 highly relevant candidates. Stage 2 (Ranking) uses LightGBM to score and rank these 10 candidates with multi-dimensional features.",
+                pros: "Ultra-low latency (<1ms), highly scalable, combines collaborative filtering with rich gradient boosting, eliminates computational bottlenecks.",
+                cons: "Increases system engineering complexity. If Stage 1 retrieval drops a highly relevant chocolate, Stage 2 ranking can never recover it."
+            },
+            lightgbm: {
+                title: "🌲 Microsoft LightGBM",
+                desc: "High-performance Gradient Boosting Decision Tree (GBDT) utilizing Leaf-wise growth. Employs GOSS and EFB algorithms to deliver exceptionally high ranking accuracy on sparse categorical and demographic features.",
+                pros: "Superb ranking accuracy (AUC/NDCG); natively handles continuous and categorical features; extremely fast training and inference speeds.",
+                cons: "Leaf-wise splitting can overfit on very small or noisy datasets."
+            },
+            xgboost: {
+                title: "🚀 XGBoost Classifier",
+                desc: "A highly robust and classic Gradient Boosting Decision Tree algorithm using Level-wise growth. Implements comprehensive L1/L2 regularization and second-order Taylor expansion to build symmetric trees.",
+                pros: "Excellent prediction generalization; highly robust tree structures; reduces sensitivity to noisy, low-sample outliers.",
+                cons: "Slower training speeds and larger memory footprint compared to LightGBM; prone to overconfident score mappings (high purchase intent biases)."
+            },
+            itemcf: {
+                title: "👥 Collaborative Filtering (ItemCF)",
+                desc: "Classic item-based Collaborative Filtering. Computes co-occurrence similarities between items globally. Recommends items mathematically similar to the customer's purchase history.",
+                pros: "Superb explainability ('People who bought this also bought...'); highly sensitive to interest changes; completely bypasses demographic profiling.",
+                cons: "Severe cold-start limitations for new guests; completely blind to real-time context (like store channel type or week calendar changes)."
+            },
+            mba: {
+                title: "🛒 Market Basket Analysis (MBA)",
+                desc: "Global item association mining using Apriori lift rules. Evaluates 'Item A -> Item B' transaction occurrences globally. Perfect for shopping cart cross-selling recommendations.",
+                pros: "Perfect for checkout cross-selling, basket add-ons, or gift bundle upsells. Highly effective when paired with promotional copywriting.",
+                cons: "Entirely blind to customer demographic profiles (age, gender); fully dependent on historical co-occurrence frequencies."
+            }
+        };
+
         function selectAlgo(model) {
             selectedModel = model;
             document.querySelectorAll('.algo-btn').forEach(btn => btn.classList.remove('active'));
@@ -630,6 +679,14 @@
             if (model === 'lightgbm') document.getElementById('btn-lgb').classList.add('active');
             if (model === 'xgboost') document.getElementById('btn-xgb').classList.add('active');
             if (model === 'itemcf') document.getElementById('btn-cf').classList.add('active');
+            if (model === 'mba') document.getElementById('btn-mba').classList.add('active');
+            
+            // Update helper panel
+            const info = modelDetails[model] || modelDetails.hybrid;
+            document.getElementById('helper-title').innerText = info.title;
+            document.getElementById('helper-desc').innerText = info.desc;
+            document.getElementById('helper-pros').innerText = info.pros;
+            document.getElementById('helper-cons').innerText = info.cons;
             
             runRecommendation();
         }
@@ -643,13 +700,11 @@
             runRecommendation();
         }
 
-        // Handle customer dropdown change
         function onCustomerChange() {
             const userVal = document.getElementById('user-select').value;
             const csPanel = document.getElementById('cold-start-attributes');
             
             if (userVal === "new_user") {
-                // Generate a random UUID-like anonymous ID for mapping
                 const randomId = "GUEST_" + Math.random().toString(36).substring(2, 10).toUpperCase();
                 document.getElementById('guest-id-input').value = randomId;
                 csPanel.style.display = 'block';
@@ -657,87 +712,87 @@
                 csPanel.style.display = 'none';
             }
             
-            runRecommendation();
+            selectAlgo(selectedModel);
         }
 
-        // Initialize and load datasets from live API or fallback
         async function init() {
             const userSelect = document.getElementById('user-select');
             const storeSelect = document.getElementById('store-select');
             
             try {
-                // Fetch live customers from server.py API
                 const cRes = await fetch('/api/customers');
-                if (cRes.ok) {
-                    apiCustomers = await cRes.json();
-                }
+                if (cRes.ok) apiCustomers = await cRes.json();
                 
-                // Fetch live stores from server.py API
                 const sRes = await fetch('/api/stores');
-                if (sRes.ok) {
-                    apiStores = await sRes.json();
-                }
+                if (sRes.ok) apiStores = await sRes.json();
+                
+                let userOptionsHtml = `<option value="new_user" style="color: var(--accent-coldstart); font-weight:700;">🆕 GUEST / NEW USER (Cold Start)</option>`;
+                userOptionsHtml += apiCustomers.map(c => 
+                    `<option value="${c.customer_id || c.id}">${c.customer_id || c.id} (Gender: ${c.gender}, Age: ${c.age})</option>`
+                ).join('');
+                userSelect.innerHTML = userOptionsHtml;
+
+                storeSelect.innerHTML = apiStores.map(s => 
+                    `<option value="${s.store_id || s.id}">${s.store_type || s.type} - ${s.store_name || s.name} (${s.city})</option>`
+                ).join('');
+
+                onCustomerChange();
             } catch (e) {
                 console.warn("Unable to connect to live API. Using fallback offline mock data.");
                 apiCustomers = fallbackCustomers;
                 apiStores = fallbackStores;
+                
+                let userOptionsHtml = `<option value="new_user" style="color: var(--accent-coldstart); font-weight:700;">🆕 GUEST / NEW USER (Cold Start)</option>`;
+                userOptionsHtml += fallbackCustomers.map(c => 
+                    `<option value="${c.id}">${c.id} (Gender: ${c.gender}, Age: ${c.age})</option>`
+                ).join('');
+                userSelect.innerHTML = userOptionsHtml;
+
+                storeSelect.innerHTML = fallbackStores.map(s => 
+                    `<option value="${s.id}">${s.store_type || s.type} - ${s.store_name || s.name} (${s.city})</option>`
+                ).join('');
+
+                onCustomerChange();
             }
-
-            // Populate Customer options, adding the New User Cold-Start option at the top
-            let userOptionsHtml = `<option value="new_user" style="color: var(--accent-coldstart); font-weight:700;">🆕 GUEST / NEW USER (Cold Start)</option>`;
-            userOptionsHtml += apiCustomers.map(c => 
-                `<option value="${c.customer_id || c.id}">${c.customer_id || c.id} (Gender: ${c.gender}, Age: ${c.age})</option>`
-            ).join('');
-            userSelect.innerHTML = userOptionsHtml;
-
-            // Populate Store options
-            storeSelect.innerHTML = apiStores.map(s => 
-                `<option value="${s.store_id || s.id}">${s.store_type || s.type} - ${s.store_name || s.name} (${s.city})</option>`
-            ).join('');
-
-            // Trigger dropdown display update
-            onCustomerChange();
         }
 
-        // Fire request to real backend /api/recommend or execute simulated logic if offline
         async function runRecommendation() {
             const userVal = document.getElementById('user-select').value;
             const storeId = document.getElementById('store-select').value;
-            
             const store = apiStores.find(s => (s.store_id || s.id) === storeId) || fallbackStores[0];
             const pipeVis = document.getElementById('pipeline-visualizer');
-            
             pipeVis.style.display = (selectedModel === 'hybrid') ? 'flex' : 'none';
 
             let recommendations = [];
             let latencyMs = 0;
             let displayProfile = {};
 
-            // 1. Fetch from Real API
             try {
                 let url = `/api/recommend?store_id=${storeId}&model=${selectedModel}`;
                 if (userVal === "new_user") {
                     const guestId = document.getElementById('guest-id-input').value;
                     const guestAge = document.getElementById('guest-age-select').value;
                     url += `&user_id=${guestId}&gender=${activeGuestGender}&age=${guestAge}`;
-                    
-                    displayProfile = {
-                        id: guestId,
-                        age: `${guestAge} yrs (Estimated)`,
-                        gender: `${activeGuestGender} (Stated)`,
-                        membership: `<span class="badge-coldstart">Cold Start (Guest)</span>`
-                    };
+                    displayProfile = { id: guestId, age: `${guestAge} yrs`, gender: `${activeGuestGender} (Stated)`, membership: `<span class="badge-coldstart">Cold Start (Guest)</span>` };
                 } else {
                     url += `&user_id=${userVal}`;
                     const customer = apiCustomers.find(c => (c.customer_id || c.id) === userVal);
-                    displayProfile = {
-                        id: userVal,
-                        age: `${customer.age} yrs`,
-                        gender: customer.gender,
-                        membership: customer.loyalty_member === 1 
-                            ? `<span class="badge-loyalty">Loyalty Member</span>` 
-                            : `<span class="badge-regular">Regular</span>`
-                    };
+                    displayProfile = { id: userVal, age: `${customer.age} yrs`, gender: customer.gender, membership: (customer.loyalty_member === 1 ? `<span class="badge-loyalty">Loyalty Member</span>` : `<span class="badge-regular">Regular</span>`) };
+                }
+
+                const listEl = document.getElementById('products-list');
+                listEl.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary); width: 100%;">
+                        <div style="font-size: 1.8rem; margin-bottom: 0.8rem; display: inline-block; animation: rotate 1.5s linear infinite;">🔄</div>
+                        <div>Running personalized predictions via AI recommender...</div>
+                    </div>
+                `;
+                
+                if (!document.getElementById('spin-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'spin-style';
+                    style.innerHTML = `@keyframes rotate { 100% { transform: rotate(360deg); } }`;
+                    document.head.appendChild(style);
                 }
 
                 const res = await fetch(url);
@@ -749,59 +804,33 @@
                     throw new Error("API Server error");
                 }
             } catch (err) {
-                // Offline Fallback Mode
                 console.log("Offline processing client-side simulated recommender...");
                 const guestId = userVal === "new_user" ? document.getElementById('guest-id-input').value : userVal;
                 
-                // Build client-side guest simulation details
                 if (userVal === "new_user") {
                     const guestAge = document.getElementById('guest-age-select').value;
-                    displayProfile = {
-                        id: guestId,
-                        age: `${guestAge} yrs (Estimated)`,
-                        gender: `${activeGuestGender} (Stated)`,
-                        membership: `<span class="badge-coldstart">Cold Start (Guest)</span>`
-                    };
+                    displayProfile = { id: guestId, age: `${guestAge} yrs (Estimated)`, gender: `${activeGuestGender} (Stated)`, membership: `<span class="badge-coldstart">Cold Start (Guest)</span>` };
                 } else {
                     const customer = apiCustomers.find(c => (c.customer_id || c.id) === userVal) || fallbackCustomers[0];
-                    displayProfile = {
-                        id: userVal,
-                        age: `${customer.age} yrs`,
-                        gender: customer.gender,
-                        membership: customer.loyalty_member === 1 
-                            ? `<span class="badge-loyalty">Loyalty Member</span>` 
-                            : `<span class="badge-regular">Regular</span>`
-                    };
+                    displayProfile = { id: userVal, age: `${customer.age} yrs`, gender: customer.gender, membership: ((customer.loyalty_member || customer.loyalty) === 1 ? `<span class="badge-loyalty">Loyalty Member</span>` : `<span class="badge-regular">Regular</span>`) };
                 }
 
-                // Simulate candidates
                 const seedProds = fallbackProducts;
                 recommendations = seedProds.map((p, idx) => {
                     let score = 5.0 - (idx * 0.4);
-                    // Add boost if gender fits category
                     if (activeGuestGender === 'Female' && p.category === 'Truffle') score += 1.5;
                     if (store.store_type === 'Airport' && p.brand === 'Godiva') score += 2.0;
-                    return {
-                        product_id: p.id,
-                        product_name: p.name,
-                        brand: p.brand,
-                        category: p.category,
-                        cocoa_percent: p.cocoa,
-                        weight_g: p.weight,
-                        pred_score: score
-                    };
+                    const probability = 1 / (1 + Math.exp(-score + 2.5));
+                    return { product_id: p.id, product_name: p.name, brand: p.brand, category: p.category, cocoa_percent: p.cocoa, weight_g: p.weight, pred_score: score, probability: probability };
                 }).sort((a,b) => b.pred_score - a.pred_score).slice(0, 5);
-                
                 latencyMs = selectedModel === 'hybrid' ? 0.45 : (selectedModel === 'lightgbm' ? 2.39 : 0.18);
             }
 
-            // 2. Render Profile Card
             document.getElementById('profile-id').innerText = displayProfile.id;
             document.getElementById('profile-age').innerText = displayProfile.age;
             document.getElementById('profile-gender').innerText = displayProfile.gender;
             document.getElementById('profile-loyalty').innerHTML = displayProfile.membership;
 
-            // 3. Render Product Cards
             const listEl = document.getElementById('products-list');
             listEl.innerHTML = recommendations.map((p, idx) => `
                 <div class="product-card" style="animation-delay: ${idx * 0.06}s">
@@ -818,12 +847,11 @@
                     <div class="product-specs">
                         <div class="spec-cocoa">${p.cocoa_percent}% Cocoa</div>
                         <div class="spec-weight">${p.weight_g}g</div>
-                        ${selectedModel !== 'itemcf' ? `<div class="spec-probability">Propensity: High</div>` : ''}
+                        ${p.probability !== undefined ? `<div class="spec-probability">Purchase Intent: ${(p.probability * 100).toFixed(1)}%</div>` : ''}
                     </div>
                 </div>
             `).join('');
 
-            // 4. Update Diagnostics
             const modelLabel = selectedModel === 'hybrid' ? "TWO-STAGE (CF + LGBM)" : selectedModel.toUpperCase();
             document.getElementById('diag-model').innerText = modelLabel;
             document.getElementById('diag-store').innerText = (store.store_type || store.type).toUpperCase();

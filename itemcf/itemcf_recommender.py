@@ -18,11 +18,7 @@ class ItemCFRecommender(BaseRecommender):
         
         # 1. Group train purchases by user
         print("  Grouping transactions by user...")
-        # To save memory and process fast, extract values directly
-        user_items_dict = defaultdict(set)
-        for row in train_sales[['customer_id', 'product_id']].itertuples(index=False):
-            user_items_dict[row.customer_id].add(row.product_id)
-        self.user_items = dict(user_items_dict)
+        self.user_items = train_sales.groupby('customer_id')['product_id'].apply(set).to_dict()
         
         # 2. Count occurrences of each item
         print("  Counting item purchases...")

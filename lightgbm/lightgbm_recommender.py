@@ -67,17 +67,26 @@ class LightGBMRecommender(BaseRecommender):
             }
             
         # Interaction stats
+        # Interaction stats
         print("  Computing user-item interaction frequencies...")
-        for row in train_sales.itertuples(index=False):
-            cid, pid = row.customer_id, row.product_id
-            self.user_item_counts[(cid, pid)] += 1
+        prod_brand_map = products.set_index('product_id')['brand'].to_dict()
+        prod_cat_map = products.set_index('product_id')['category'].to_dict()
+        
+        user_item_freq = train_sales.groupby(['customer_id', 'product_id']).size()
+        for (cid, pid), count in user_item_freq.items():
+            self.user_item_counts[(cid, pid)] = count
             
-            p_info = products[products['product_id'] == pid]
-            if not p_info.empty:
-                brand = p_info.iloc[0]['brand']
-                category = p_info.iloc[0]['category']
-                self.user_brand_counts[(cid, brand)] += 1
-                self.user_category_counts[(cid, category)] += 1
+        train_sales_merged = train_sales[['customer_id', 'product_id']].copy()
+        train_sales_merged['brand'] = train_sales_merged['product_id'].map(prod_brand_map)
+        train_sales_merged['category'] = train_sales_merged['product_id'].map(prod_cat_map)
+        
+        user_brand_freq = train_sales_merged.groupby(['customer_id', 'brand']).size()
+        for (cid, brand), count in user_brand_freq.items():
+            self.user_brand_counts[(cid, brand)] = count
+            
+        user_cat_freq = train_sales_merged.groupby(['customer_id', 'category']).size()
+        for (cid, cat), count in user_cat_freq.items():
+            self.user_category_counts[(cid, cat)] = count
                 
         # 2. Build Supervised Dataset (Sampling Positive and Negative Labels)
         print("  Constructing supervised training samples (Negative Sampling)...")
@@ -89,28 +98,33 @@ class LightGBMRecommender(BaseRecommender):
         pos_samples['label'] = 1
         
         # Negative sampling (4 negatives per positive)
-        neg_data = []
+        cids = []
+        pids = []
+        dates = []
+        store_ids = []
+        quantities = []
+        
+        all_prods = np.array(self.all_product_ids)
         for row in pos_samples.itertuples():
-            cid = row.customer_id
-            order_date = row.order_date
-            store_id = row.store_id
-            qty = row.quantity
+            negs = np.random.choice(all_prods, size=4, replace=False)
+            while row.product_id in negs:
+                negs = np.random.choice(all_prods, size=4, replace=False)
             
-            # Select 4 random products the user hasn't bought or doesn't buy constantly
-            potential_negs = [p for p in self.all_product_ids if p != row.product_id]
-            negs = np.random.choice(potential_negs, size=4, replace=False)
+            cids.extend([row.customer_id] * 4)
+            pids.extend(negs)
+            dates.extend([row.order_date] * 4)
+            store_ids.extend([row.store_id] * 4)
+            quantities.extend([row.quantity] * 4)
             
-            for neg_pid in negs:
-                neg_data.append({
-                    'customer_id': cid,
-                    'product_id': neg_pid,
-                    'order_date': order_date,
-                    'store_id': store_id,
-                    'quantity': qty,
-                    'discount': 0.0,
-                    'label': 0
-                })
-        neg_samples = pd.DataFrame(neg_data)
+        neg_samples = pd.DataFrame({
+            'customer_id': cids,
+            'product_id': pids,
+            'order_date': dates,
+            'store_id': store_ids,
+            'quantity': quantities,
+            'discount': 0.0,
+            'label': 0
+        })
         
         train_df = pd.concat([pos_samples[['customer_id', 'product_id', 'order_date', 'store_id', 'quantity', 'discount', 'label']], neg_samples], ignore_index=True)
         
@@ -128,36 +142,49 @@ class LightGBMRecommender(BaseRecommender):
         # 4. Feature Extraction & Encodings
         X = pd.DataFrame()
         
+        # Categorical Categories definitions
+        self.gender_categories = [0, 1, 2]
+        self.loyalty_categories = [0, 1]
+        self.category_categories = [0, 1, 2, 3, 4, 5]
+        self.brand_categories = [0, 1, 2, 3, 4, 5, 6]
+        self.store_type_categories = [0, 1, 2, 3, 4]
+        self.day_of_week_categories = list(range(7))
+        self.month_categories = list(range(1, 13))
+        
         # Encode Categoricals
         X['user_age'] = train_df['age'].fillna(35)
-        X['user_gender'] = self._encode_series(train_df['gender'], self.gender_map, 2)
-        X['user_loyalty'] = train_df['loyalty_member'].fillna(0).astype(int)
+        X['user_gender'] = pd.Categorical(self._encode_series(train_df['gender'], self.gender_map, 2), categories=self.gender_categories)
+        X['user_loyalty'] = pd.Categorical(train_df['loyalty_member'].fillna(0).astype(int), categories=self.loyalty_categories)
         
         X['item_cocoa'] = train_df['cocoa_percent'].fillna(0.0).astype(float)
         X['item_weight'] = train_df['weight_g'].fillna(0.0).astype(float)
-        X['item_category'] = self._encode_series(train_df['category'], self.category_map, 5)
-        X['item_brand'] = self._encode_series(train_df['brand'], self.brand_map, 6)
+        X['item_category'] = pd.Categorical(self._encode_series(train_df['category'], self.category_map, 5), categories=self.category_categories)
+        X['item_brand'] = pd.Categorical(self._encode_series(train_df['brand'], self.brand_map, 6), categories=self.brand_categories)
         
-        X['store_type'] = self._encode_series(train_df['store_type'], self.store_type_map, 4)
-        X['day_of_week'] = train_df['day_of_week'].fillna(0).astype(int)
-        X['month'] = train_df['month'].fillna(1).astype(int)
+        X['store_type'] = pd.Categorical(self._encode_series(train_df['store_type'], self.store_type_map, 4), categories=self.store_type_categories)
+        X['day_of_week'] = pd.Categorical(train_df['day_of_week'].fillna(0).astype(int), categories=self.day_of_week_categories)
+        X['month'] = pd.Categorical(train_df['month'].fillna(1).astype(int), categories=self.month_categories)
         
         # Merge stats features
         print("  Injecting aggregated statistics and interaction features...")
-        u_p = [self.user_stats.get(cid, {'user_total_purchases':0, 'user_avg_revenue':0.0, 'user_avg_discount':0.0}) for cid in train_df['customer_id']]
-        i_s = [self.item_stats.get(pid, {'item_total_sales':0, 'item_avg_discount':0.0}) for pid in train_df['product_id']]
+        user_total_purchases_map = {cid: stats['user_total_purchases'] for cid, stats in self.user_stats.items()}
+        user_avg_revenue_map = {cid: stats['user_avg_revenue'] for cid, stats in self.user_stats.items()}
+        user_avg_discount_map = {cid: stats['user_avg_discount'] for cid, stats in self.user_stats.items()}
         
-        X['user_total_purchases'] = [item['user_total_purchases'] for item in u_p]
-        X['user_avg_revenue'] = [item['user_avg_revenue'] for item in u_p]
-        X['user_avg_discount'] = [item['user_avg_discount'] for item in u_p]
+        X['user_total_purchases'] = train_df['customer_id'].map(user_total_purchases_map).fillna(0).astype(int)
+        X['user_avg_revenue'] = train_df['customer_id'].map(user_avg_revenue_map).fillna(0.0).astype(float)
+        X['user_avg_discount'] = train_df['customer_id'].map(user_avg_discount_map).fillna(0.0).astype(float)
         
-        X['item_total_sales'] = [item['item_total_sales'] for item in i_s]
-        X['item_avg_discount'] = [item['item_avg_discount'] for item in i_s]
+        item_total_sales_map = {pid: stats['item_total_sales'] for pid, stats in self.item_stats.items()}
+        item_avg_discount_map = {pid: stats['item_avg_discount'] for pid, stats in self.item_stats.items()}
+        
+        X['item_total_sales'] = train_df['product_id'].map(item_total_sales_map).fillna(0).astype(int)
+        X['item_avg_discount'] = train_df['product_id'].map(item_avg_discount_map).fillna(0.0).astype(float)
         
         # User-Item interaction history
-        X['user_item_purchase_count'] = [self.user_item_counts[(cid, pid)] for cid, pid in zip(train_df['customer_id'], train_df['product_id'])]
-        X['user_brand_purchase_count'] = [self.user_brand_counts[(cid, brand)] for cid, brand in zip(train_df['customer_id'], train_df['brand'])]
-        X['user_category_purchase_count'] = [self.user_category_counts[(cid, cat)] for cid, cat in zip(train_df['customer_id'], train_df['category'])]
+        X['user_item_purchase_count'] = [self.user_item_counts.get((cid, pid), 0) for cid, pid in zip(train_df['customer_id'], train_df['product_id'])]
+        X['user_brand_purchase_count'] = [self.user_brand_counts.get((cid, brand), 0) for cid, brand in zip(train_df['customer_id'], train_df['brand'])]
+        X['user_category_purchase_count'] = [self.user_category_counts.get((cid, cat), 0) for cid, cat in zip(train_df['customer_id'], train_df['category'])]
         
         y = train_df['label']
         
@@ -175,7 +202,7 @@ class LightGBMRecommender(BaseRecommender):
         )
         self.model.fit(X, y)
         print("  LightGBM training complete.")
-
+ 
     def recommend(self, user_id, k=5, store_id=None, order_date=None):
         candidates = self.products_df.copy()
         num_candidates = len(candidates)
@@ -186,50 +213,31 @@ class LightGBMRecommender(BaseRecommender):
         profile = self.customer_profiles.get(user_id, {'age': 35, 'gender': 'Unknown', 'loyalty_member': 0})
         
         X_cand['user_age'] = [profile['age']] * num_candidates
-        X_cand['user_gender'] = [self.gender_map.get(profile['gender'], 2)] * num_candidates
-        X_cand['user_loyalty'] = [profile['loyalty_member']] * num_candidates
+        X_cand['user_gender'] = pd.Categorical([self.gender_map.get(profile['gender'], 2)] * num_candidates, categories=self.gender_categories)
+        X_cand['user_loyalty'] = pd.Categorical([profile['loyalty_member']] * num_candidates, categories=self.loyalty_categories)
         
         X_cand['item_cocoa'] = candidates['cocoa_percent'].fillna(0.0).values
         X_cand['item_weight'] = candidates['weight_g'].fillna(0.0).values
-        X_cand['item_category'] = self._encode_series(candidates['category'], self.category_map, 5).values
-        X_cand['item_brand'] = self._encode_series(candidates['brand'], self.brand_map, 6).values
+        X_cand['item_category'] = pd.Categorical(self._encode_series(candidates['category'], self.category_map, 5), categories=self.category_categories)
+        X_cand['item_brand'] = pd.Categorical(self._encode_series(candidates['brand'], self.brand_map, 6), categories=self.brand_categories)
         
         stype = self.store_types.get(store_id, 'Unknown') if store_id else 'Unknown'
-        X_cand['store_type'] = [self.store_type_map.get(stype, 4)] * num_candidates
+        X_cand['store_type'] = pd.Categorical([self.store_type_map.get(stype, 4)] * num_candidates, categories=self.store_type_categories)
         
         odate = pd.to_datetime(order_date) if order_date else pd.to_datetime('2024-11-15')
-        X_cand['day_of_week'] = [odate.dayofweek] * num_candidates
-        X_cand['month'] = [odate.month] * num_candidates
+        X_cand['day_of_week'] = pd.Categorical([odate.dayofweek] * num_candidates, categories=self.day_of_week_categories)
+        X_cand['month'] = pd.Categorical([odate.month] * num_candidates, categories=self.month_categories)
         
         X_cand['user_total_purchases'] = [u_stats['user_total_purchases']] * num_candidates
         X_cand['user_avg_revenue'] = [u_stats['user_avg_revenue']] * num_candidates
         X_cand['user_avg_discount'] = [u_stats['user_avg_discount']] * num_candidates
         
-        i_sales = []
-        i_avg_discs = []
-        ui_purchases = []
-        ub_purchases = []
-        uc_purchases = []
+        X_cand['item_total_sales'] = candidates['product_id'].map(lambda pid: self.item_stats.get(pid, {}).get('item_total_sales', 0))
+        X_cand['item_avg_discount'] = candidates['product_id'].map(lambda pid: self.item_stats.get(pid, {}).get('item_avg_discount', 0.0))
         
-        for row in candidates.itertuples(index=False):
-            pid = row.product_id
-            brand = row.brand
-            cat = row.category
-            
-            i_stats = self.item_stats.get(pid, {'item_total_sales': 0, 'item_avg_discount': 0.0})
-            i_sales.append(i_stats['item_total_sales'])
-            i_avg_discs.append(i_stats['item_avg_discount'])
-            
-            ui_purchases.append(self.user_item_counts[(user_id, pid)])
-            ub_purchases.append(self.user_brand_counts[(user_id, brand)])
-            uc_purchases.append(self.user_category_counts[(user_id, cat)])
-            
-        X_cand['item_total_sales'] = i_sales
-        X_cand['item_avg_discount'] = i_avg_discs
-        
-        X_cand['user_item_purchase_count'] = ui_purchases
-        X_cand['user_brand_purchase_count'] = ub_purchases
-        X_cand['user_category_purchase_count'] = uc_purchases
+        X_cand['user_item_purchase_count'] = candidates['product_id'].map(lambda pid: self.user_item_counts.get((user_id, pid), 0))
+        X_cand['user_brand_purchase_count'] = candidates['brand'].map(lambda brand: self.user_brand_counts.get((user_id, brand), 0))
+        X_cand['user_category_purchase_count'] = candidates['category'].map(lambda cat: self.user_category_counts.get((user_id, cat), 0))
         
         cols_order = [
             'user_age', 'user_gender', 'user_loyalty',

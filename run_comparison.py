@@ -1,8 +1,15 @@
+import os
+# Force single-threaded execution for OpenMP and MKL to prevent library conflict deadlocks on Mac
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 import sys
 import time
 import pandas as pd
 
-import os
 base_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(base_path)
 sys.path.append(os.path.join(base_path, "itemcf"))
@@ -137,4 +144,9 @@ def main():
     print("\nComparison results written successfully to 'model_comparison_results.md'.")
 
 if __name__ == '__main__':
+    import multiprocessing
+    try:
+        multiprocessing.set_start_method('spawn')
+    except RuntimeError:
+        pass
     main()

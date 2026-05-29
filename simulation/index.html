@@ -237,6 +237,65 @@
             letter-spacing: 0.5px;
         }
 
+        .badge-coldstart {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+            padding: 0.2rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            background: rgba(18, 12, 8, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+        }
+
+        /* 性别选择器 (冷启动访客) */
+        .gender-selector {
+            display: flex;
+            background: rgba(18, 12, 8, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 10px;
+            padding: 0.25rem;
+            gap: 0.25rem;
+        }
+
+        .gender-btn {
+            flex: 1;
+            padding: 0.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .gender-btn.active {
+            background: var(--accent-gold);
+            color: var(--bg-primary);
+            font-weight: 700;
+        }
+
         /* Recommended Grid */
         .results-panel {
             min-height: 520px;
@@ -433,7 +492,7 @@
 
     <div class="main-container">
         <!-- Control Panel -->
-        <div class="glass-panel">
+        <div class="glass-panel" style="height: fit-content;">
             <div>
                 <h2 class="panel-title">⚙️ 控制中心</h2>
                 
@@ -444,14 +503,44 @@
                         <button class="algo-btn" id="btn-lgb" onclick="selectAlgo('lightgbm')">LightGBM</button>
                         <button class="algo-btn" id="btn-xgb" onclick="selectAlgo('xgboost')">XGBoost</button>
                         <button class="algo-btn" id="btn-cf" onclick="selectAlgo('itemcf')">ItemCF</button>
+                        <button class="algo-btn" id="btn-mba" onclick="selectAlgo('mba')">关联规则 (MBA)</button>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="user-select">模拟当前顾客</label>
-                    <select id="user-select" onchange="runRecommendation()">
+                    <select id="user-select" onchange="onCustomerChange()">
                         <!-- Populated in JS -->
                     </select>
+                </div>
+
+                <!-- 冷启动自定义属性面板（仅在选择新用户/访客时显示） -->
+                <div class="form-group" id="cold-start-attributes" style="display: none; border-left: 3px solid #e74c3c; padding-left: 1rem; margin-top: 1rem; animation: fadeInUp 0.4s ease;">
+                    <label style="color: #e74c3c; font-weight:700;">访客特征 (冷启动)</label>
+                    
+                    <div style="margin-bottom: 0.8rem;">
+                        <label for="guest-id-input" style="font-size:0.75rem; margin-bottom:0.3rem;">分配访客 ID</label>
+                        <input type="text" id="guest-id-input" placeholder="GUEST_uuid" readonly style="font-size:0.9rem; padding: 0.6rem 1rem;">
+                    </div>
+
+                    <div style="margin-bottom: 0.8rem;">
+                        <label style="font-size:0.75rem; margin-bottom:0.3rem;">性别</label>
+                        <div class="gender-selector">
+                            <button class="gender-btn active" id="gender-male" onclick="setGuestGender('Male')">男</button>
+                            <button class="gender-btn" id="gender-female" onclick="setGuestGender('Female')">女</button>
+                            <button class="gender-btn" id="gender-unknown" onclick="setGuestGender('Unknown')">未知</button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="guest-age-select" style="font-size:0.75rem; margin-bottom:0.3rem;">预估年龄组</label>
+                        <select id="guest-age-select" onchange="runRecommendation()" style="font-size:0.9rem; padding: 0.6rem 1rem;">
+                            <option value="18">18岁 - Z 世代</option>
+                            <option value="25">25岁 - 青年白领</option>
+                            <option value="35" selected>35岁 - 中产骨干</option>
+                            <option value="55">55岁 - 银发一族</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -463,7 +552,7 @@
             </div>
 
             <!-- Customer Details Profile Subcard -->
-            <div class="profile-subcard">
+            <div class="profile-subcard" style="margin-top: 1rem;">
                 <h3 style="font-size: 1rem; color: var(--accent-gold); margin-bottom: 0.9rem;">👤 顾客基本画像</h3>
                 <div class="profile-row">
                     <span>顾客 ID:</span>
@@ -485,7 +574,7 @@
         </div>
 
         <!-- Results Panel -->
-        <div class="glass-panel results-panel">
+        <div class="glass-panel results-panel" style="height: fit-content;">
             <div>
                 <h2 class="panel-title">🏆 智能为您推荐的 Top-5 巧克力</h2>
                 
@@ -507,16 +596,31 @@
             </div>
 
             <!-- Diagnostics -->
-            <div class="diagnostics">
+            <div class="diagnostics" style="margin-top: 1.5rem;">
                 <div class="diagnostic-pill">架构/模型: <span id="diag-model" style="color: var(--accent-gold); font-weight:700;">-</span></div>
                 <div class="diagnostic-pill">购买渠道: <span id="diag-store" style="color: var(--accent-gold); font-weight:700;">-</span></div>
                 <div class="diagnostic-pill">推理延迟: <span class="latency-value" id="diag-latency">- ms</span></div>
             </div>
         </div>
+
+        <!-- 模型百科知识看板 (Full Width Bottom Dashboard) -->
+        <div class="glass-panel" style="grid-column: 1 / -1; margin-top: 0rem; animation: fadeInUp 0.8s ease 0.2s both;">
+            <h2 class="panel-title" style="margin-bottom: 1.2rem; border-bottom: 1px solid rgba(212, 175, 55, 0.15); padding-bottom: 0.6rem;">💡 推荐算法模型百科 (Model Guide)</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; align-items: start;">
+                <div>
+                    <h3 style="font-size: 1.15rem; color: var(--accent-gold); margin-bottom: 0.6rem; font-weight: 700;" id="helper-title">模型百科</h3>
+                    <p id="helper-desc" style="font-size: 0.92rem; color: var(--text-primary); line-height: 1.6; font-weight: 400;">-</p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.8rem; font-size: 0.9rem; line-height: 1.5; border-left: 1px solid rgba(212, 175, 55, 0.15); padding-left: 2rem;">
+                    <div><span style="color: #2ecc71; font-weight: 700; display: inline-block; width: 100px;">🟢 优势 (Pros):</span><span id="helper-pros" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; display: inline;">-</span></div>
+                    <div style="margin-top: 0.4rem;"><span style="color: #e74c3c; font-weight: 700; display: inline-block; width: 100px;">🔴 劣势 (Cons):</span><span id="helper-cons" style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; display: inline;">-</span></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // --- 1. Static Mock Datasets representing the Chocolate Shop database ---
+        // --- 1. Static Mock Datasets representing the Chocolate Shop database (Offline Fallback) ---
         const products = [
             { id: "P0002", name: "Dark Chocolate 70%", brand: "Cadbury", category: "Praline", cocoa: 70, weight: 100 },
             { id: "P0003", name: "Truffle Chocolate 70%", brand: "Hershey", category: "Praline", cocoa: 70, weight: 120 },
@@ -555,8 +659,59 @@
             { id: "S022", type: "Retail", name: "社区街边零售店", city: "柏林" }
         ];
 
-        // --- 2. Embedded logic simulating the trained models ---
+        const fallbackCustomers = [
+            { id: "C000001", age: 40, gender: "Male", loyalty_member: 1 },
+            { id: "C000003", age: 58, gender: "Female", loyalty_member: 1 },
+            { id: "C000004", age: 25, gender: "Female", loyalty_member: 0 },
+            { id: "C000009", age: 18, gender: "Male", loyalty_member: 0 },
+            { id: "C000012", age: 53, gender: "Male", loyalty_member: 1 }
+        ];
+
+        const fallbackStores = [
+            { id: "S001", store_type: "Airport", store_name: "机场旗舰店", city: "墨尔本" },
+            { id: "S005", store_type: "Online", store_name: "官方线上商城", city: "全球" },
+            { id: "S016", store_type: "Mall", store_name: "超级商业广场店", city: "悉尼" },
+            { id: "S022", store_type: "Retail", store_name: "社区街边零售店", city: "柏林" }
+        ];
+
+        // --- 2. Live data mappings and algorithm selection ---
         let selectedModel = "hybrid";
+        let activeGuestGender = "Male";
+        let apiCustomers = [];
+        let apiStores = [];
+
+        const modelDetails = {
+            hybrid: {
+                title: "🔥 两阶段级联推荐 (Hybrid)",
+                desc: "工业界最核心的级联架构。第一阶段使用 ItemCF 从几百种商品中秒级召回最相关的 10 个候选商品，第二阶段使用 LightGBM 对这 10 个候选进行精准多维度重排序。",
+                pros: "极低延迟（<1ms）、扩展性极佳，兼顾协同过滤与高维精排，消除全量打分性能瓶颈。",
+                cons: "系统复杂度成倍增加，如果第一阶段召回模型漏掉了关键商品，第二阶段排序模型无法挽回。"
+            },
+            lightgbm: {
+                title: "🌲 微软 LightGBM 分类器",
+                desc: "基于叶子分裂（Leaf-wise）的高效梯度提升决策树（GBDT）算法。利用单边梯度采样与互斥特征捆绑，在稀疏表格特征上具备极其精准的预测精度。",
+                pros: "特征工程适应性强，对连续/类别特征鲁棒；排序精准度（AUC/NDCG）极高；推理速度极快。",
+                cons: "由于叶子分裂深，在样本规模较小时容易产生过拟合。"
+            },
+            xgboost: {
+                title: "🚀 经典 XGBoost 分类器",
+                desc: "工业界经典的梯度提升决策树。基于层分裂（Level-wise）构建对称决策树。加入二阶泰勒展开和 L1/L2 正则项，具备极佳的鲁棒性。",
+                pros: "预测泛化能力极佳，运行稳定，决策树结构对称有利于避免小样本噪点干扰。",
+                cons: "计算开销和内存占用明显大于 LightGBM；容易产生绝对概率的过度自信偏置（购买意愿偏高）。"
+            },
+            itemcf: {
+                title: "👥 协同过滤推荐 (ItemCF)",
+                desc: "基于物品相似度的协同过滤推荐。通过全局交易历史计算出物品两两共现相似度。基于用户历史已购巧克力的相似物进行加权推荐。",
+                pros: "可解释性极佳（“买过此产品的用户也买了...”）；能敏锐捕捉用户的兴趣转移；完全不需要用户画像。",
+                cons: "存在严重的冷启动死穴；无法感知即时情境（如门店类型、星期几变化）；无法推荐新上架的商品。"
+            },
+            mba: {
+                title: "🛒 关联规则推荐 (MBA)",
+                desc: "经典的市场篮子分析算法（Apriori/提升度分析）。根据全局顾客的购物篮，挖掘出“巧克力 A + 巧克力 B”的高频伴随规则。基于该规则做交叉搭售。",
+                pros: "天然适合购物车、结账台的“搭配换购”交叉销售场景，极易通过文案提高转化率。",
+                cons: "完全与顾客的人口学画像（年龄、性别）无关；极度依赖历史共现频次，对冷启动新访客完全失效。"
+            }
+        };
 
         function selectAlgo(model) {
             selectedModel = model;
@@ -565,26 +720,88 @@
             if (model === 'lightgbm') document.getElementById('btn-lgb').classList.add('active');
             if (model === 'xgboost') document.getElementById('btn-xgb').classList.add('active');
             if (model === 'itemcf') document.getElementById('btn-cf').classList.add('active');
+            if (model === 'mba') document.getElementById('btn-mba').classList.add('active');
+            
+            // 更新百科助手面板
+            const info = modelDetails[model] || modelDetails.hybrid;
+            document.getElementById('helper-title').innerText = info.title;
+            document.getElementById('helper-desc').innerText = info.desc;
+            document.getElementById('helper-pros').innerText = info.pros;
+            document.getElementById('helper-cons').innerText = info.cons;
             
             runRecommendation();
         }
 
-        // Initialize lists
-        function init() {
-            const userSelect = document.getElementById('user-select');
-            userSelect.innerHTML = customers.map(c => 
-                `<option value="${c.id}">${c.id} (${c.gender === 'Male' ? '男' : '女'}，${c.age}岁)</option>`
-            ).join('');
-
-            const storeSelect = document.getElementById('store-select');
-            storeSelect.innerHTML = stores.map(s => 
-                `<option value="${s.id}">${s.type} - ${s.name} (${s.city})</option>`
-            ).join('');
-
+        function setGuestGender(gender) {
+            activeGuestGender = gender;
+            document.querySelectorAll('.gender-btn').forEach(btn => btn.classList.remove('active'));
+            if (gender === 'Male') document.getElementById('gender-male').classList.add('active');
+            if (gender === 'Female') document.getElementById('gender-female').classList.add('active');
+            if (gender === 'Unknown') document.getElementById('gender-unknown').classList.add('active');
             runRecommendation();
         }
 
-        // Simulates scoring for ItemCF
+        // 处理顾客选择改变
+        function onCustomerChange() {
+            const userVal = document.getElementById('user-select').value;
+            const csPanel = document.getElementById('cold-start-attributes');
+            
+            if (userVal === "new_user") {
+                const randomId = "GUEST_" + Math.random().toString(36).substring(2, 10).toUpperCase();
+                document.getElementById('guest-id-input').value = randomId;
+                csPanel.style.display = 'block';
+            } else {
+                csPanel.style.display = 'none';
+            }
+            
+            selectAlgo(selectedModel);
+        }
+
+        // Initialize lists from backend API or fallback
+        async function init() {
+            const userSelect = document.getElementById('user-select');
+            const storeSelect = document.getElementById('store-select');
+            
+            try {
+                // Fetch real sample customers
+                const cRes = await fetch('/api/customers');
+                if (cRes.ok) apiCustomers = await cRes.json();
+                
+                // Fetch real stores
+                const sRes = await fetch('/api/stores');
+                if (sRes.ok) apiStores = await sRes.json();
+                
+                let userOptionsHtml = `<option value="new_user" style="color: #e74c3c; font-weight:700;">🆕 访客 / 新顾客 (冷启动)</option>`;
+                userOptionsHtml += apiCustomers.map(c => 
+                    `<option value="${c.customer_id}">${c.customer_id} (${c.gender === 'Male' ? '男' : '女'}，${c.age}岁)</option>`
+                ).join('');
+                userSelect.innerHTML = userOptionsHtml;
+
+                storeSelect.innerHTML = apiStores.map(s => 
+                    `<option value="${s.store_id}">${s.store_type || s.type} - ${s.store_name || s.city} (${s.city})</option>`
+                ).join('');
+
+                onCustomerChange();
+            } catch (err) {
+                console.warn("Backend API unavailable, using local static data fallback:", err);
+                apiCustomers = fallbackCustomers;
+                apiStores = fallbackStores;
+                
+                let userOptionsHtml = `<option value="new_user" style="color: #e74c3c; font-weight:700;">🆕 访客 / 新顾客 (冷启动)</option>`;
+                userOptionsHtml += fallbackCustomers.map(c => 
+                    `<option value="${c.id}">${c.id} (${c.gender === 'Male' ? '男' : '女'}，${c.age}岁)</option>`
+                ).join('');
+                userSelect.innerHTML = userOptionsHtml;
+
+                storeSelect.innerHTML = fallbackStores.map(s => 
+                    `<option value="${s.id}">${s.store_type || s.type} - ${s.store_name || s.name} (${s.city})</option>`
+                ).join('');
+
+                onCustomerChange();
+            }
+        }
+
+        // Simulates scoring for ItemCF (Offline Fallback)
         function getItemCFScore(p, user) {
             let score = 0;
             if (p.id === 'P0002') score += 8.5; 
@@ -597,33 +814,25 @@
             if (p.id === 'P0025') score += 5.1;
             if (p.id === 'P0028') score += 4.8;
             if (p.id === 'P0104') score += 4.5;
-            
-            // Add deterministic noise
             score += (p.cocoa % 7) * 0.1;
             return score;
         }
 
-        // Simulates scoring for GBDT (XGBoost/LightGBM)
+        // Simulates scoring for GBDT (Offline Fallback)
         function getGBDTScore(p, user, store) {
             let score = 0;
-            
-            // Base item popularity
             if (p.id === 'P0015') score += 4.0; 
             if (p.id === 'P0012') score += 3.5; 
-            
-            // Store type affinity
-            if (store.type === 'Airport') {
+            if (store.store_type === 'Airport') {
                 if (p.category === 'Truffle') score += 3.0;
                 if (p.brand === 'Godiva' || p.brand === 'Ferrero') score += 2.5;
                 if (p.weight >= 120) score += 2.0;
-            } else if (store.type === 'Online') {
+            } else if (store.store_type === 'Online') {
                 if (p.category === 'Dark' || p.category === 'Milk') score += 2.8;
                 if (p.cocoa >= 80) score += 1.8;
-            } else if (store.type === 'Mall') {
+            } else if (store.store_type === 'Mall') {
                 if (p.category === 'White' || p.category === 'Praline') score += 2.5;
             }
-            
-            // Demographic affinity
             if (user.age >= 50) {
                 if (p.cocoa >= 80) score += 3.5;
                 if (p.category === 'Dark') score += 2.0;
@@ -631,122 +840,149 @@
                 if (p.cocoa <= 70) score += 2.5;
                 if (p.category === 'White' || p.category === 'Praline') score += 2.0;
             }
-            
             if (user.gender === 'Female') {
                 if (p.category === 'Truffle' || p.category === 'Praline') score += 1.5;
             }
-            
-            // Loyalty affinity
-            if (user.loyalty === 1) {
+            if (user.loyalty_member === 1) {
                 if (p.brand === 'Lindt' || p.brand === 'Godiva') score += 2.0;
             }
-            
             return score;
         }
 
-        function runRecommendation() {
-            const userId = document.getElementById('user-select').value;
+        async function runRecommendation() {
+            const userVal = document.getElementById('user-select').value;
             const storeId = document.getElementById('store-select').value;
             
-            const user = customers.find(c => c.id === userId);
-            const store = stores.find(s => s.id === storeId);
-            
-            if (!user || !store) return;
-
-            // 1. Update Profile Subcard
-            document.getElementById('profile-id').innerText = user.id;
-            document.getElementById('profile-age').innerText = `${user.age} 岁`;
-            document.getElementById('profile-gender').innerText = user.gender === 'Male' ? '男' : '女';
-            document.getElementById('profile-loyalty').innerHTML = user.loyalty === 1
-                ? `<span class="badge-loyalty">Loyalty Member</span>`
-                : `<span class="badge-regular">Regular</span>`;
-
-            // Display pipeline visualizer in hybrid mode
+            const store = apiStores.find(s => (s.store_id || s.id) === storeId) || fallbackStores[0];
             const pipeVis = document.getElementById('pipeline-visualizer');
-            if (selectedModel === 'hybrid') {
-                pipeVis.style.display = 'flex';
-            } else {
-                pipeVis.style.display = 'none';
+            
+            pipeVis.style.display = (selectedModel === 'hybrid') ? 'flex' : 'none';
+
+            let recommendations = [];
+            let latencyMs = 0;
+            let displayProfile = {};
+
+            // 1. Fetch from Real API
+            try {
+                let url = `/api/recommend?store_id=${storeId}&model=${selectedModel}`;
+                if (userVal === "new_user") {
+                    const guestId = document.getElementById('guest-id-input').value;
+                    const guestAge = document.getElementById('guest-age-select').value;
+                    url += `&user_id=${guestId}&gender=${activeGuestGender}&age=${guestAge}`;
+                    
+                    displayProfile = {
+                        id: guestId,
+                        age: `${guestAge} 岁 (预估)`,
+                        gender: `${activeGuestGender === 'Male' ? '男' : (activeGuestGender === 'Female' ? '女' : '未知')} (自述)`,
+                        membership: `<span class="badge-coldstart">冷启动 (新访客)</span>`
+                    };
+                } else {
+                    url += `&user_id=${userVal}`;
+                    const customer = apiCustomers.find(c => (c.customer_id || c.id) === userVal);
+                    displayProfile = {
+                        id: userVal,
+                        age: `${customer.age} 岁`,
+                        gender: customer.gender === 'Male' ? '男' : '女',
+                        membership: customer.loyalty_member === 1 
+                            ? `<span class="badge-loyalty">Loyalty Member</span>` 
+                            : `<span class="badge-regular">Regular</span>`
+                    };
+                }
+
+                // Show loading indicator
+                const productsListEl = document.getElementById('products-list');
+                productsListEl.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary); width: 100%;">
+                        <div style="font-size: 1.8rem; margin-bottom: 0.8rem; display: inline-block; animation: rotate 1.5s linear infinite;">🔄</div>
+                        <div>正在通过 AI 推荐模型进行个性化计算打分...</div>
+                    </div>
+                `;
+                
+                if (!document.getElementById('spin-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'spin-style';
+                    style.innerHTML = `@keyframes rotate { 100% { transform: rotate(360deg); } }`;
+                    document.head.appendChild(style);
+                }
+
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    recommendations = data.recommendations;
+                    latencyMs = data.latency_ms;
+                } else {
+                    throw new Error("API Server error");
+                }
+            } catch (err) {
+                // Fallback offline rendering
+                console.log("Offline processing client-side simulated recommender...");
+                const guestId = userVal === "new_user" ? document.getElementById('guest-id-input').value : userVal;
+                
+                if (userVal === "new_user") {
+                    const guestAge = document.getElementById('guest-age-select').value;
+                    displayProfile = {
+                        id: guestId,
+                        age: `${guestAge} 岁 (预估)`,
+                        gender: `${activeGuestGender === 'Male' ? '男' : (activeGuestGender === 'Female' ? '女' : '未知')} (自述)`,
+                        membership: `<span class="badge-coldstart">冷启动 (新访客)</span>`
+                    };
+                } else {
+                    const customer = apiCustomers.find(c => (c.customer_id || c.id) === userVal) || fallbackCustomers[0];
+                    displayProfile = {
+                        id: userVal,
+                        age: `${customer.age} 岁`,
+                        gender: customer.gender === 'Male' ? '男' : '女',
+                        membership: (customer.loyalty_member || customer.loyalty) === 1 
+                            ? `<span class="badge-loyalty">Loyalty Member</span>` 
+                            : `<span class="badge-regular">Regular</span>`
+                    };
+                }
+
+                const seedProds = products;
+                recommendations = seedProds.map((p, idx) => {
+                    let score = 5.0 - (idx * 0.4);
+                    if (activeGuestGender === 'Female' && p.category === 'Truffle') score += 1.5;
+                    if (store.store_type === 'Airport' && p.brand === 'Godiva') score += 2.0;
+                    const probability = 1 / (1 + Math.exp(-score + 2.5));
+                    return {
+                        product_id: p.id,
+                        product_name: p.name,
+                        brand: p.brand,
+                        category: p.category,
+                        cocoa_percent: p.cocoa,
+                        weight_g: p.weight,
+                        pred_score: score,
+                        probability: probability
+                    };
+                }).sort((a,b) => b.pred_score - a.pred_score).slice(0, 5);
+                
+                latencyMs = selectedModel === 'hybrid' ? 0.45 : (selectedModel === 'lightgbm' ? 2.39 : 0.18);
             }
 
-            // 2. Core Recommendation Engine Simulator
-            const t0 = performance.now();
-            let scoredProducts = [];
-            let latency = 0;
+            // 2. Render Profile Card
+            document.getElementById('profile-id').innerText = displayProfile.id;
+            document.getElementById('profile-age').innerText = displayProfile.age;
+            document.getElementById('profile-gender').innerText = displayProfile.gender;
+            document.getElementById('profile-loyalty').innerHTML = displayProfile.membership;
 
-            if (selectedModel === 'itemcf') {
-                // Single Model: ItemCF on all 200 items
-                scoredProducts = products.map(p => {
-                    const score = getItemCFScore(p, user);
-                    return { product: p, score: score, probability: null };
-                });
-                latency = 0.14 + (Math.random() * 0.05); // ~0.18ms
-            } 
-            else if (selectedModel === 'lightgbm') {
-                // Single Model: LightGBM on all 200 items
-                scoredProducts = products.map(p => {
-                    const score = getGBDTScore(p, user, store);
-                    const probability = 1 / (1 + Math.exp(-score + 4.5));
-                    return { product: p, score: score, probability: probability };
-                });
-                latency = 2.18 + (Math.random() * 0.25); // ~2.39ms
-            } 
-            else if (selectedModel === 'xgboost') {
-                // Single Model: XGBoost on all 200 items
-                scoredProducts = products.map(p => {
-                    const score = getGBDTScore(p, user, store) - 0.1; // slightly different weight
-                    const probability = 1 / (1 + Math.exp(-score + 4.5));
-                    return { product: p, score: score, probability: probability };
-                });
-                latency = 2.45 + (Math.random() * 0.2); // ~2.58ms
-            } 
-            else if (selectedModel === 'hybrid') {
-                // 🔥 INDUSTRIAL TWO-STAGE PIPELINE (CF + LGBM) 🔥
-                
-                // STAGE 1: Retrieval (召回) via ItemCF
-                // We score all items using ItemCF and retrieve the Top 10 items
-                const retrieved = products.map(p => {
-                    const score = getItemCFScore(p, user);
-                    return { product: p, cf_score: score };
-                }).sort((a, b) => b.cf_score - a.cf_score).slice(0, 10);
-                
-                // STAGE 2: Ranking (精排) via LightGBM
-                // We only run LightGBM on the 10 retrieved candidates!
-                scoredProducts = retrieved.map(item => {
-                    const p = item.product;
-                    const score = getGBDTScore(p, user, store);
-                    const probability = 1 / (1 + Math.exp(-score + 4.5));
-                    return { product: p, score: score, probability: probability };
-                });
-                
-                // Latency benefits: running GBDT on 10 items instead of 200 items!
-                const cf_latency = 0.12 + (Math.random() * 0.03); // ItemCF retrieval latency
-                const lgb_latency = 0.28 + (Math.random() * 0.05); // LightGBM ranking latency on 10 items
-                latency = cf_latency + lgb_latency; // Total ~0.45ms!
-            }
-
-            // Sort products by final score descending
-            scoredProducts.sort((a, b) => b.score - a.score);
-            const top5 = scoredProducts.slice(0, 5);
-
-            // 3. Render Results Grid
-            const listEl = document.getElementById('products-list');
-            listEl.innerHTML = top5.map((item, idx) => `
+            // 3. Render Product Cards
+            const productsListEl = document.getElementById('products-list');
+            productsListEl.innerHTML = recommendations.map((p, idx) => `
                 <div class="product-card" style="animation-delay: ${idx * 0.06}s">
                     <div class="product-info">
                         <div class="product-name-row">
                             <span class="product-idx">#${idx + 1}</span>
-                            <span class="product-name">${item.product.name}</span>
+                            <span class="product-name">${p.product_name}</span>
                         </div>
                         <div class="product-meta">
-                            <span class="product-tag">${item.product.brand}</span>
-                            <span class="product-category">${item.product.category}</span>
+                            <span class="product-tag">${p.brand}</span>
+                            <span class="product-category">${p.category}</span>
                         </div>
                     </div>
                     <div class="product-specs">
-                        <div class="spec-cocoa">${item.product.cocoa}% 可可</div>
-                        <div class="spec-weight">${item.product.weight}g</div>
-                        ${item.probability ? `<div class="spec-probability">购买意愿: ${(item.probability * 100).toFixed(1)}%</div>` : ''}
+                        <div class="spec-cocoa">${p.cocoa_percent}% 可可</div>
+                        <div class="spec-weight">${p.weight_g}g</div>
+                        ${p.probability !== undefined ? `<div class="spec-probability">购买意愿: ${(p.probability * 100).toFixed(1)}%</div>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -754,10 +990,10 @@
             // 4. Update Diagnostics
             const modelLabel = selectedModel === 'hybrid' ? "TWO-STAGE (CF + LGBM)" : selectedModel.toUpperCase();
             document.getElementById('diag-model').innerText = modelLabel;
-            document.getElementById('diag-store').innerText = store.type.toUpperCase();
+            document.getElementById('diag-store').innerText = (store.store_type || store.type || 'Unknown').toUpperCase();
             document.getElementById('diag-latency').innerHTML = selectedModel === 'hybrid' 
-                ? `<span class="latency-value">${latency.toFixed(4)} ms</span> <span style="font-size:0.75rem; color:var(--text-secondary)">(0.12ms 召回 + 0.32ms 精排)</span>`
-                : `<span class="latency-value">${latency.toFixed(4)} ms</span>`;
+                ? `<span class="latency-value">${latencyMs.toFixed(3)} ms</span> <span style="font-size:0.75rem; color:var(--text-secondary)">(0.12ms 召回 + 精排)</span>`
+                : `<span class="latency-value">${latencyMs.toFixed(3)} ms</span>`;
         }
 
         window.onload = init;
