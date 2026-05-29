@@ -123,6 +123,40 @@ The raw score from the VIP Lounge is currently an unbound number (e.g., `1.68`).
 
 ## 🧠 Detailed Neural Network Workflow
 
+To understand how the mathematical stages of our model map directly to PyTorch code, reference the workflow code mapping diagram and breakdown below:
+
+```mermaid
+graph TD
+    classDef codeStyle fill:#1e1e1e,stroke:#d4af37,stroke-width:1.5px,color:#d4af37,font-family:monospace;
+    classDef stageStyle fill:#2c3e50,stroke:#34495e,stroke-width:2px,color:#fff;
+    
+    subgraph DataPrep ["1. Demographic & Context Prep (CPU/Numpy)"]
+        Code_Prep["Class: NeuralRecommender<br/>• fit() - maps training dataset<br/>• recommend() - maps live web queries"]:::codeStyle
+        Stage_FE["Stage 2: Feature Engineering<br/>• Continuous Normalized variables<br/>• One-Hot encoded categoricals"]:::stageStyle
+    end
+
+    subgraph DeepNetwork ["2. PyTorch Neural Pipeline (GPU/Tensor)"]
+        Code_Init["Class: NCFModel.__init__()<br/>• self.user_embed = nn.Embedding()<br/>• self.item_embed = nn.Embedding()<br/>• self.mlp = nn.Sequential(...)"]:::codeStyle
+        
+        Code_Fwd["Class: NCFModel.forward()<br/>• user_vec = self.user_embed(u)<br/>• item_vec = self.item_embed(i)"]:::codeStyle
+        
+        Code_Cat["Class: NCFModel.forward()<br/>• combined = torch.cat([...], dim=1)"]:::codeStyle
+        
+        Code_MLP["Class: NCFModel.forward()<br/>• logits = self.mlp(combined)"]:::codeStyle
+    end
+
+    Stage_Out["Output Score<br/>• Predicted intent probability [0.0, 1.0]"]:::stageStyle
+
+    %% Data flow mapping
+    Code_Prep -->|Transforms inputs| Stage_FE
+    Stage_FE -->|Feeds aux_features tensor| Code_Cat
+    
+    Code_Init -->|Defines architecture| Code_Fwd
+    Code_Fwd -->|Extracts dense embeddings| Code_Cat
+    Code_Cat -->|Passes combined 52D vector| Code_MLP
+    Code_MLP -->|Sigmoid output activation| Stage_Out
+```
+
 The NCF model processes recommendations through four precise operational stages, combining historical collaborative feedback with real-time customer demographics:
 
 ### 1. Dense Embedding Stage
