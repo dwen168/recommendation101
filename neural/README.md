@@ -4,6 +4,48 @@ This directory houses the PyTorch implementation of the **Neural Collaborative F
 
 ---
 
+## 🔄 Training Data & Negative Sampling Pipeline
+
+Before any data is passed into PyTorch embeddings or MLP layers, the raw datasets must be transformed and balanced. This offline training data preparation pipeline shows how **Negative Sampling** is injected:
+
+```mermaid
+graph TD
+    %% Define Styles
+    classDef rawStyle fill:#2c3e50,stroke:#34495e,stroke-width:2px,color:#fff,font-size:11px;
+    classDef processStyle fill:#3498db,stroke:#2980b9,stroke-width:2px,color:#fff,font-size:11px;
+    classDef balancedStyle fill:#d4af37,stroke:#aa8a22,stroke-width:2px,color:#120c08,font-weight:bold,font-size:11px;
+    classDef torchStyle fill:#e67e22,stroke:#d35400,stroke-width:2px,color:#fff,font-weight:bold,font-size:11px;
+
+    %% Raw Data Inputs
+    A1[train_sales]:::rawStyle --> |Sample 100k positive transactions| PosGen[Positive Pair Generator]
+    A2[customers]:::rawStyle --> |Random customer ID pool| NegGen[Negative Pair Generator]
+    A3[products]:::rawStyle --> |Random product ID pool| NegGen
+
+    %% Label Assignments
+    PosGen --> |Assign Label = 1.0| PosSamples[Positive Samples]:::processStyle
+    NegGen --> |Assign Label = 0.0| NegSamples[Negative Samples]:::processStyle
+
+    %% Combination & Balanced Sets
+    PosSamples & NegSamples --> |Concatenate arrays| BalancedPool[Balanced ID Dataset<br/>1:1 Positive-to-Negative Ratio]:::balancedStyle
+
+    %% High-performance Feature Processing
+    BalancedPool --> MapDict[ID Contiguous Integer Mapper<br/>customer/product ID ➔ index]:::processStyle
+    A2 & A3 --> |Raw Demographics & Metadata| MapDict
+    MapDict --> FeatEng[Demographic & Context Feature Processing]:::processStyle
+    
+    FeatEng --> Norm[Continuous Features: Min-Max Normalization]:::processStyle
+    FeatEng --> OH[Categorical Features: np.eye One-Hot Encoding]:::processStyle
+
+    %% PyTorch Loading
+    BalancedPool --> TorchLoad[ChocolateDataset & DataLoader]:::torchStyle
+    Norm & OH --> |aux_features 20-Dim| TorchLoad
+    
+    %% Input to Model
+    TorchLoad --> |Shuffled mini-batches| TargetModel[PyTorch NCFModel Inputs]:::torchStyle
+```
+
+---
+
 ## 📐 Neural Network Architecture Diagram
 
 The model combines high-dimensional sparse representations (ID Embeddings) with context-aware features, routing them through a multi-layer perceptron (MLP) to output a purchase probability.
@@ -138,9 +180,18 @@ Here is a detailed breakdown of the operations performed during the model's trai
 * **The Mechanism**: Maps raw, sparse customer string IDs (e.g. `C000004`) and product string IDs (e.g. `P0008`) to contiguous integer values starting from `0` up to `N-1`.
 * **Why it's necessary**: PyTorch `nn.Embedding` layers act as highly optimized continuous index lookups. Passing raw strings directly to GPU tensors is not supported; mapping them to contiguous integers allows rapid index slicing to extract embedding vectors. It also includes an `UNKNOWN` token mapping to safely handle cold-start entities at serving time.
 
-### 2. Negative Sampling
-* **The Mechanism**: Implicit feedback dataset contains only positive checkout events (labels of `1.0`). We randomly pair active customers with products they have *not* bought in the historical logs, assigning a label of `0.0`.
-* **Why it's necessary**: If a binary classification neural network is trained exclusively on positive transactions, it will quickly converge on a trivial solution—always predicting a `1.0` probability for any user-item pair. Synthesizing negative interactions provides contrast, teaching the model the subtle mathematical boundaries between preferred chocolates and ignored chocolates.
+### 2. Negative Sampling (Synthesizing Non-Purchased Instances)
+* **The Mechanism**: Since the raw transaction logs `train_sales` contain exclusively positive purchase events (every entry is a successful buy, represented as `label = 1.0`), we must synthetically generate negative cases.
+  1. We sample `pos_sample_size` (up to 100,000) transactions directly from the sales records as positive instances.
+  2. For the negative pool, we randomly choose user IDs (`neg_cids`) from our customer database and pair them with random product IDs (`neg_pids`) from our catalog, assigning a target `label = 0.0`.
+  3. We concatenate these positive and negative lists together to form a balanced training pool containing equal parts positive interactions and synthetic negative interactions (a 1:1 ratio).
+* **The Mathematical Necessity (`BCELoss` Convergence)**:
+  * Our NCF network utilizes a Binary Cross-Entropy loss function ($\mathcal{L} = - [y \log(\hat{y}) + (1 - y) \log(1 - \hat{y})]$).
+  * Without negative sampling, all $y = 1.0$. The loss equation simplifies to just $\mathcal{L} = - \log(\hat{y})$. To minimize this loss, the neural network's parameters would update in a single direction, learning a trivial shortcut of always predicting $\hat{y} = 1.0$ regardless of the user or item vector inputs.
+  * Introducing `0.0` labels provides **mathematical contrast**. It establishes a clear decision boundary, forcing the network to optimize weights by learning features that pull positive pairs closer together and push negative pairs further apart.
+* **Impact on Latent Vectors (Embeddings)**:
+  * **Positive Pairs (`1.0`)**: In gradient backpropagation, positive labels generate gradients that drag the matching User Embedding vector and Item Embedding vector closer together in the continuous 16-dimensional space (maximizing cosine similarity).
+  * **Negative Pairs (`0.0`)**: Conversely, negative labels generate gradients that act as a repulsive force, pushing the respective user and product vectors away from each other. This vector pushing-and-pulling dynamics is what creates high-quality, generalizable latent representations.
 
 ### 3. Feature Engineering & Normalization
 * **Continuous Features (Age, Cocoa%, Weight)**: Scaled to `[0.0, 1.0]` using Min-Max scaling.
