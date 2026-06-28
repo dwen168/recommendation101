@@ -2,10 +2,12 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/en", "destination": "/simulation/index_en.html" },
-    { "source": "/index_en.html", "destination": "/simulation/index_en.html" },
+    { "source": "/zh", "destination": "/simulation/index.html" },
+    { "source": "/methodology_en", "destination": "/simulation/methodology_en.html" },
+    { "source": "/methodology_en.html", "destination": "/simulation/methodology_en.html" },
     { "source": "/methodology", "destination": "/simulation/methodology.html" },
     { "source": "/methodology.html", "destination": "/simulation/methodology.html" },
-    { "source": "/", "destination": "/simulation/index.html" },
-    { "source": "/index.html", "destination": "/simulation/index.html" }
+    { "source": "/", "destination": "/simulation/index_en.html" },
+    { "source": "/index.html", "destination": "/simulation/index_en.html" }
   ]
 }

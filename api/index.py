@@ -86,7 +86,7 @@ try:
 except Exception as e:
     print(f"[Vercel Initialization Warning] {e}")
 
-class RecommendationAPIHandler(http.server.BaseHTTPRequestHandler):
+class handler(http.server.BaseHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
@@ -340,4 +340,5 @@ class RecommendationAPIHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data).encode('utf-8'))
 
-handler = RecommendationAPIHandler
+app = handler
+application = handler
