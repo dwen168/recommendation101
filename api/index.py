@@ -112,22 +112,33 @@ class handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         load_saved_models()
-        parsed_url = urllib.parse.urlparse(self.path)
+        raw_path = self.path
+        orig_uri = self.headers.get('x-forwarded-uri', raw_path) if hasattr(self, 'headers') and self.headers else raw_path
+        
+        parsed_url = urllib.parse.urlparse(orig_uri)
         path = parsed_url.path
         query = urllib.parse.parse_qs(parsed_url.query)
         
-        if path.startswith("/api/recommend"):
+        raw_parsed = urllib.parse.urlparse(raw_path)
+        raw_query = urllib.parse.parse_qs(raw_parsed.query)
+        for k, v in raw_query.items():
+            if k not in query:
+                query[k] = v
+        
+        full_check_str = f"{path} {raw_path}".lower()
+        
+        if "recommend" in full_check_str or 'store_id' in query or 'user_id' in query:
             self.handle_recommend(query)
-        elif path.startswith("/api/customers"):
+        elif "customers" in full_check_str:
             self.handle_json_response(dataset.get('sample_customers', []))
-        elif path.startswith("/api/stores"):
+        elif "stores" in full_check_str:
             self.handle_json_response(dataset.get('sample_stores', []))
-        elif path.startswith("/api/products"):
+        elif "products" in full_check_str:
             self.handle_json_response(dataset.get('products', {}))
-        elif path.startswith("/api/download"):
+        elif "download" in full_check_str:
             self.handle_download(query)
         else:
-            self.send_error(404, "API Route Not Found")
+            self.send_error(404, f"API Route Not Found: path='{path}', raw='{raw_path}'")
 
     def handle_download(self, query):
         filename = query.get('file', [None])[0]
