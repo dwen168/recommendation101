@@ -909,6 +909,9 @@
             let latencyMs = 0;
             let displayProfile = {};
 
+            let apiFallbackNotice = "";
+            let isFallback = false;
+
             // 1. Fetch from Real API
             try {
                 let url = `/api/recommend?store_id=${storeId}&model=${selectedModel}`;
@@ -957,6 +960,8 @@
                     const data = await response.json();
                     recommendations = data.recommendations;
                     latencyMs = data.latency_ms;
+                    isFallback = data.is_fallback;
+                    apiFallbackNotice = data.fallback_notice || "";
                 } else {
                     throw new Error("API Server error");
                 }
@@ -1014,7 +1019,7 @@
 
             // 3. Render Product Cards
             const productsListEl = document.getElementById('products-list');
-            productsListEl.innerHTML = recommendations.map((p, idx) => `
+            let cardsHtml = recommendations.map((p, idx) => `
                 <div class="product-card" style="animation-delay: ${idx * 0.06}s">
                     <div class="product-info">
                         <div class="product-name-row">
@@ -1034,9 +1039,24 @@
                 </div>
             `).join('');
 
+            if (isFallback && apiFallbackNotice) {
+                cardsHtml += `
+                    <div style="width: 100%; margin-top: 1rem; padding: 0.9rem 1.2rem; background: rgba(241, 196, 15, 0.12); border: 1px solid rgba(241, 196, 15, 0.4); border-radius: 10px; color: #f39c12; font-size: 0.88rem; display: flex; align-items: center; gap: 0.8rem; line-height: 1.4;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.2rem; flex-shrink: 0;"></i>
+                        <div>${apiFallbackNotice}</div>
+                    </div>
+                `;
+            }
+
+            productsListEl.innerHTML = cardsHtml;
+
             // 4. Update Diagnostics
-            const modelLabel = selectedModel === 'hybrid' ? "TWO-STAGE (CF + LGBM)" : selectedModel.toUpperCase();
+            const modelLabel = selectedModel === 'hybrid' ? "TWO-STAGE (CF + LGBM)" : (isFallback ? `${selectedModel.toUpperCase()} (降级切换中)` : selectedModel.toUpperCase());
             document.getElementById('diag-model').innerText = modelLabel;
+            document.getElementById('diag-store').innerText = (store.store_type || store.type || 'Unknown').toUpperCase();
+            document.getElementById('diag-latency').innerHTML = selectedModel === 'hybrid' 
+                ? `<span class="latency-value">${latencyMs.toFixed(3)} ms</span> <span style="font-size:0.75rem; color:var(--text-secondary)">(0.12ms 召回 + 精排)</span>`
+                : `<span class="latency-value">${latencyMs.toFixed(3)} ms</span>`;
             document.getElementById('diag-store').innerText = (store.store_type || store.type || 'Unknown').toUpperCase();
             document.getElementById('diag-latency').innerHTML = selectedModel === 'hybrid' 
                 ? `<span class="latency-value">${latencyMs.toFixed(3)} ms</span> <span style="font-size:0.75rem; color:var(--text-secondary)">(0.12ms 召回 + 精排)</span>`

@@ -89,12 +89,23 @@ def load_saved_models():
         meta = pickle.load(f)
         dataset.update(meta)
         
+    global IS_XGB_FALLBACK
     # Load recommenders
     for r_name in ['itemcf', 'xgboost', 'lightgbm', 'neural', 'mba']:
-        with open(os.path.join(models_dir, f"{r_name}.pkl"), "rb") as f:
-            recommenders[r_name] = pickle.load(f)
+        try:
+            with open(os.path.join(models_dir, f"{r_name}.pkl"), "rb") as f:
+                recommenders[r_name] = pickle.load(f)
+        except Exception as e:
+            print(f"[Warning] Could not load model {r_name}: {e}")
+            if r_name == 'xgboost':
+                IS_XGB_FALLBACK = True
+    if 'xgboost' not in recommenders and 'lightgbm' in recommenders:
+        recommenders['xgboost'] = recommenders['lightgbm']
+        IS_XGB_FALLBACK = True
             
     print(f"[Server] All models loaded successfully in {time.time() - t0:.2f}s!\n")
+
+IS_XGB_FALLBACK = False
 
 class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -398,12 +409,19 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
         # Get customer profile details
         user_profile = dataset['customers'].get(user_id, {})
         
+        is_fallback = (model_name == 'xgboost' and IS_XGB_FALLBACK)
+        fallback_notice = "⚡ 云端轻量化提示：受限于 Serverless 函数 500MB 体积限制，XGBoost 已透明平滑切换至 LightGBM 预测引擎。" if is_fallback else ""
+        fallback_notice_en = "⚡ Serverless Optimization: To comply with cloud size limits, XGBoost is running seamlessly via LightGBM engine." if is_fallback else ""
+
         response = {
             'user_id': user_id,
             'user_profile': user_profile,
             'model_used': model_name,
             'store_id': store_id,
             'latency_ms': round(latency_ms, 3),
+            'is_fallback': is_fallback,
+            'fallback_notice': fallback_notice,
+            'fallback_notice_en': fallback_notice_en,
             'recommendations': recommended_products
         }
         

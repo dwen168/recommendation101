@@ -811,6 +811,8 @@
             pipeVis.style.display = (selectedModel === 'hybrid') ? 'flex' : 'none';
 
             let recommendations = [];
+            let apiFallbackNoticeEn = "";
+            let isFallback = false;
             let latencyMs = 0;
             let displayProfile = {};
 
@@ -847,6 +849,8 @@
                     const data = await res.json();
                     recommendations = data.recommendations;
                     latencyMs = data.latency_ms;
+                    isFallback = data.is_fallback;
+                    apiFallbackNoticeEn = data.fallback_notice_en || "";
                 } else {
                     throw new Error("API Server error");
                 }
@@ -879,7 +883,7 @@
             document.getElementById('profile-loyalty').innerHTML = displayProfile.membership;
 
             const listEl = document.getElementById('products-list');
-            listEl.innerHTML = recommendations.map((p, idx) => `
+            let cardsHtml = recommendations.map((p, idx) => `
                 <div class="product-card" style="animation-delay: ${idx * 0.06}s">
                     <div class="product-info">
                         <div class="product-name-row">
@@ -899,7 +903,18 @@
                 </div>
             `).join('');
 
-            const modelLabel = selectedModel === 'hybrid' ? "TWO-STAGE (CF + LGBM)" : selectedModel.toUpperCase();
+            if (isFallback && apiFallbackNoticeEn) {
+                cardsHtml += `
+                    <div style="width: 100%; margin-top: 1rem; padding: 0.9rem 1.2rem; background: rgba(241, 196, 15, 0.12); border: 1px solid rgba(241, 196, 15, 0.4); border-radius: 10px; color: #f39c12; font-size: 0.88rem; display: flex; align-items: center; gap: 0.8rem; line-height: 1.4;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.2rem; flex-shrink: 0;"></i>
+                        <div>${apiFallbackNoticeEn}</div>
+                    </div>
+                `;
+            }
+
+            listEl.innerHTML = cardsHtml;
+
+            const modelLabel = selectedModel === 'hybrid' ? "TWO-STAGE (CF + LGBM)" : (isFallback ? `${selectedModel.toUpperCase()} (Fallback to LightGBM)` : selectedModel.toUpperCase());
             document.getElementById('diag-model').innerText = modelLabel;
             document.getElementById('diag-store').innerText = (store.store_type || store.type).toUpperCase();
             document.getElementById('diag-latency').innerHTML = selectedModel === 'hybrid' 
