@@ -111,7 +111,6 @@ class handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        load_saved_models()
         raw_path = self.path
         headers_str = " ".join([f"{k}:{v}" for k, v in self.headers.items()]) if hasattr(self, 'headers') and self.headers else ""
         orig_uri = self.headers.get('x-forwarded-uri', raw_path) if hasattr(self, 'headers') and self.headers else raw_path
@@ -126,6 +125,20 @@ class handler(http.server.BaseHTTPRequestHandler):
             if k not in query:
                 query[k] = v
         
+        if path in ["/", "/index.html", "/en", "/index_en.html"]:
+            self.serve_html("index_en.html")
+            return
+        if path in ["/zh", "/index_zh.html"]:
+            self.serve_html("index.html")
+            return
+        if path in ["/methodology_en", "/methodology_en.html"]:
+            self.serve_html("methodology_en.html")
+            return
+        if path in ["/methodology", "/methodology.html"]:
+            self.serve_html("methodology.html")
+            return
+
+        load_saved_models()
         all_text = f"{path} {raw_path} {headers_str} {' '.join(query.keys())}".lower()
         
         if "customers" in all_text:
@@ -136,6 +149,8 @@ class handler(http.server.BaseHTTPRequestHandler):
             self.handle_json_response(dataset.get('products', {}))
         elif "download" in all_text:
             self.handle_download(query)
+        elif "readme" in all_text:
+            self.handle_readme(query)
         elif "recommend" in all_text or 'store_id' in query or 'user_id' in query or 'model' in query:
             self.handle_recommend(query)
         else:
@@ -180,6 +195,44 @@ class handler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(content)
         except Exception as e:
             self.send_error(500, f"Error downloading file: {str(e)}")
+
+    def handle_readme(self, query):
+        model = query.get('model', [None])[0]
+        mapping = {
+            'itemcf': os.path.join(base_path, 'itemcf', 'README.md'),
+            'lightgbm': os.path.join(base_path, 'lightgbm', 'README.md'),
+            'xgboost': os.path.join(base_path, 'xg_boost', 'README.md'),
+            'neural': os.path.join(base_path, 'neural', 'README.md'),
+            'mba': os.path.join(base_path, 'mba', 'README.md')
+        }
+        if not model or model not in mapping:
+            self.send_error(400, "Invalid algorithm model requested")
+            return
+        file_path = mapping[model]
+        if not os.path.exists(file_path):
+            self.send_error(404, "README file not found")
+            return
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.handle_json_response({'model': model, 'markdown': content})
+        except Exception as e:
+            self.send_error(500, f"Error reading README: {str(e)}")
+
+    def serve_html(self, filename="index_en.html"):
+        html_path = os.path.join(base_path, "simulation", filename)
+        try:
+            with open(html_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.send_response(200)
+            self.send_header("Content-type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+            self.end_headers()
+            self.wfile.write(content.encode('utf-8'))
+        except Exception as e:
+            self.send_error(500, f"Error reading {filename}: {str(e)}")
 
     def handle_recommend(self, query):
         user_id = query.get('user_id', [None])[0] or 'C00001'
