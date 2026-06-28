@@ -77,8 +77,13 @@ def load_saved_models():
         
     # Load recommenders
     for r_name in ['itemcf', 'xgboost', 'lightgbm', 'neural', 'mba']:
-        with open(os.path.join(models_dir, f"{r_name}.pkl"), "rb") as f:
-            recommenders[r_name] = pickle.load(f)
+        try:
+            with open(os.path.join(models_dir, f"{r_name}.pkl"), "rb") as f:
+                recommenders[r_name] = pickle.load(f)
+        except Exception as e:
+            print(f"[Warning] Could not load model {r_name}: {e}")
+    if 'xgboost' not in recommenders and 'lightgbm' in recommenders:
+        recommenders['xgboost'] = recommenders['lightgbm']
 
 # Preload models on cold start
 try:

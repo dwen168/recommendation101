@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
-import xgboost as xgb
+try:
+    import xgboost as xgb
+    HAS_XGB = True
+except ImportError:
+    HAS_XGB = False
 import os
 from collections import defaultdict, Counter
 import sys
