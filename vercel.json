@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/api/(.*)", "destination": "/api/index.py?$1" },
     { "source": "/en", "destination": "/simulation/index_en.html" },
     { "source": "/zh", "destination": "/simulation/index.html" },
     { "source": "/methodology_en", "destination": "/simulation/methodology_en.html" },

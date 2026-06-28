@@ -113,6 +113,7 @@ class handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         load_saved_models()
         raw_path = self.path
+        headers_str = " ".join([f"{k}:{v}" for k, v in self.headers.items()]) if hasattr(self, 'headers') and self.headers else ""
         orig_uri = self.headers.get('x-forwarded-uri', raw_path) if hasattr(self, 'headers') and self.headers else raw_path
         
         parsed_url = urllib.parse.urlparse(orig_uri)
@@ -125,9 +126,9 @@ class handler(http.server.BaseHTTPRequestHandler):
             if k not in query:
                 query[k] = v
         
-        full_check_str = f"{path} {raw_path}".lower()
+        full_check_str = f"{path} {raw_path} {headers_str}".lower()
         
-        if "recommend" in full_check_str or 'store_id' in query or 'user_id' in query:
+        if "recommend" in full_check_str or 'store_id' in query or 'user_id' in query or 'model' in query:
             self.handle_recommend(query)
         elif "customers" in full_check_str:
             self.handle_json_response(dataset.get('sample_customers', []))
@@ -138,7 +139,8 @@ class handler(http.server.BaseHTTPRequestHandler):
         elif "download" in full_check_str:
             self.handle_download(query)
         else:
-            self.send_error(404, f"API Route Not Found: path='{path}', raw='{raw_path}'")
+            # Default to handle_recommend for root API invocation on Vercel
+            self.handle_recommend(query)
 
     def handle_download(self, query):
         filename = query.get('file', [None])[0]
