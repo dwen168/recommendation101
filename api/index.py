@@ -1,7 +1,9 @@
 import os
-# Configure Matplotlib config directory to avoid /private/tmp sandbox violations
-os.environ["MPLCONFIGDIR"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".matplotlib")
-# Force single-threaded execution for OpenMP and MKL to prevent library conflict deadlocks on Mac
+import sys
+
+# Configure Matplotlib config directory to avoid sandbox / read-only violations
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.environ["MPLCONFIGDIR"] = os.path.join(base_path, "simulation", ".matplotlib")
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -9,29 +11,27 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 import http.server
-import socketserver
 import json
 import urllib.parse
-import sys
 import time
+import pickle
 import pandas as pd
 import numpy as np
 from collections import defaultdict
 
-# Add parent directory to path to import models
-base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Add search paths for model modules
 sys.path.append(base_path)
+sys.path.append(os.path.join(base_path, "simulation"))
 sys.path.append(os.path.join(base_path, "itemcf"))
 sys.path.append(os.path.join(base_path, "xg_boost"))
 sys.path.append(os.path.join(base_path, "lightgbm"))
 sys.path.append(os.path.join(base_path, "neural"))
 
-from evaluate import load_data, BaseRecommender
+from evaluate import BaseRecommender
 from itemcf_recommender import ItemCFRecommender
 from xgboost_recommender import XGBoostRecommender
 from lightgbm_recommender import LightGBMRecommender
 from neural_recommender import NeuralRecommender
-import pickle
 
 class MBARecommender(BaseRecommender):
     """Association Rules Recommender based on Market Basket Analysis."""
@@ -61,29 +61,15 @@ class MBARecommender(BaseRecommender):
                         break
         return rec_ids[:k]
 
-PORT = 5001
-DATA_DIR = os.path.join(base_path, "rawdata")
-
 # Global references for models and datasets
 recommenders = {}
 dataset = {}
 
 def load_saved_models():
-    print("\n[Server] Loading pre-trained models from models directory...")
-    t0 = time.time()
+    if recommenders and dataset:
+        return
+    models_dir = os.path.join(base_path, "simulation", "models")
     
-    models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-    
-    # Check if models exist
-    required_files = ["itemcf.pkl", "xgboost.pkl", "lightgbm.pkl", "neural.pkl", "mba.pkl", "metadata.pkl"]
-    missing = [f for f in required_files if not os.path.exists(os.path.join(models_dir, f))]
-    
-    if missing:
-        print(f"\n❌ Error: Pre-trained models are missing: {missing}")
-        print("👉 Please run the offline training script first:")
-        print("   python simulation/train_and_save.py\n")
-        sys.exit(1)
-        
     # Load metadata
     with open(os.path.join(models_dir, "metadata.pkl"), "rb") as f:
         meta = pickle.load(f)
@@ -93,12 +79,15 @@ def load_saved_models():
     for r_name in ['itemcf', 'xgboost', 'lightgbm', 'neural', 'mba']:
         with open(os.path.join(models_dir, f"{r_name}.pkl"), "rb") as f:
             recommenders[r_name] = pickle.load(f)
-            
-    print(f"[Server] All models loaded successfully in {time.time() - t0:.2f}s!\n")
 
-class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
+# Preload models on cold start
+try:
+    load_saved_models()
+except Exception as e:
+    print(f"[Vercel Initialization Warning] {e}")
+
+class RecommendationAPIHandler(http.server.BaseHTTPRequestHandler):
     def end_headers(self):
-        # Allow CORS
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type')
@@ -109,61 +98,23 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        load_saved_models()
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         query = urllib.parse.parse_qs(parsed_url.query)
         
-        # API Route: Get recommendation
-        if path == "/api/recommend":
+        if path.startswith("/api/recommend"):
             self.handle_recommend(query)
-        # API Route: Get sample customers
-        elif path == "/api/customers":
-            self.handle_json_response(dataset['sample_customers'])
-        # API Route: Get all stores
-        elif path == "/api/stores":
-            self.handle_json_response(dataset['sample_stores'])
-        # API Route: Get all products
-        elif path == "/api/products":
-            self.handle_json_response(dataset['products'])
-        # API Route: Download Raw CSV Data
-        elif path == "/api/download":
+        elif path.startswith("/api/customers"):
+            self.handle_json_response(dataset.get('sample_customers', []))
+        elif path.startswith("/api/stores"):
+            self.handle_json_response(dataset.get('sample_stores', []))
+        elif path.startswith("/api/products"):
+            self.handle_json_response(dataset.get('products', {}))
+        elif path.startswith("/api/download"):
             self.handle_download(query)
-        # API Route: Get Algorithm README Markdown
-        elif path == "/api/readme":
-            self.handle_readme(query)
-        elif path == "/methodology_en" or path == "/methodology_en.html":
-            self.serve_html("methodology_en.html")
-        elif path == "/methodology" or path == "/methodology.html":
-            self.serve_html("methodology.html")
-        elif path == "/zh" or path == "/index_zh.html":
-            self.serve_html("index.html")
-        elif path == "/" or path == "/index.html" or path == "/en" or path == "/index_en.html":
-            self.serve_html("index_en.html")
         else:
-            self.send_error(404, "Page Not Found")
-
-    def handle_readme(self, query):
-        model = query.get('model', [None])[0]
-        mapping = {
-            'itemcf': os.path.join(base_path, 'itemcf', 'README.md'),
-            'lightgbm': os.path.join(base_path, 'lightgbm', 'README.md'),
-            'xgboost': os.path.join(base_path, 'xg_boost', 'README.md'),
-            'neural': os.path.join(base_path, 'neural', 'README.md'),
-            'mba': os.path.join(base_path, 'mba', 'README.md')
-        }
-        if not model or model not in mapping:
-            self.send_error(400, "Invalid algorithm model requested")
-            return
-        file_path = mapping[model]
-        if not os.path.exists(file_path):
-            self.send_error(404, "README file not found")
-            return
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.handle_json_response({'model': model, 'markdown': content})
-        except Exception as e:
-            self.send_error(500, f"Error reading README: {str(e)}")
+            self.send_error(404, "API Route Not Found")
 
     def handle_download(self, query):
         filename = query.get('file', [None])[0]
@@ -185,21 +136,6 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(content)
         except Exception as e:
             self.send_error(500, f"Error downloading file: {str(e)}")
-            
-    def serve_html(self, filename="index.html"):
-        html_path = os.path.join(os.path.dirname(__file__), filename)
-        try:
-            with open(html_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            self.send_response(200)
-            self.send_header("Content-type", "text/html; charset=utf-8")
-            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-            self.send_header("Pragma", "no-cache")
-            self.send_header("Expires", "0")
-            self.end_headers()
-            self.wfile.write(content.encode('utf-8'))
-        except Exception as e:
-            self.send_error(500, f"Error reading {filename}: {str(e)}")
 
     def handle_recommend(self, query):
         user_id = query.get('user_id', [None])[0]
@@ -212,7 +148,6 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(400, "Missing user_id parameter")
             return
             
-        # Dynamically register Guest/Cold-Start User Profile
         if user_id not in dataset['customers']:
             parsed_age = int(age) if age else 35
             parsed_gender = gender if gender else 'Unknown'
@@ -224,7 +159,6 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
             }
             dataset['customers'][user_id] = guest_profile
             
-            # Inject profile into models' in-memory dictionaries so they can score natively
             for r_name in ['lightgbm', 'xgboost', 'neural', 'mba']:
                 if r_name in recommenders:
                     if r_name == 'neural':
@@ -242,14 +176,8 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
         t0 = time.time()
         rec_product_ids = []
         
-        # Realize Hybrid Mode or individual models
         if model_name == 'hybrid':
-            # 🔥 INDUSTRIAL TWO-STAGE PIPELINE 🔥
-            # Stage 1: Recall 10 items using ItemCF
             cf_recall_ids = recommenders['itemcf'].recommend(user_id, k=10, store_id=store_id)
-            
-            # Stage 2: Rank candidates using LightGBM
-            # Score all products via LightGBM and filter down to the 10 recalled candidates
             lgb_ranked_ids = recommenders['lightgbm'].recommend(user_id, k=200, store_id=store_id)
             rec_product_ids = [pid for pid in lgb_ranked_ids if pid in cf_recall_ids][:5]
         else:
@@ -261,7 +189,6 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
             
         latency_ms = (time.time() - t0) * 1000
         
-        # Compute real prediction probabilities for recommended items based on active model
         probs = {}
         try:
             if model_name in ['lightgbm', 'xgboost', 'hybrid']:
@@ -381,7 +308,6 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             print(f"[Error calculating real probs] {str(e)}")
         
-        # Populate rich product details
         recommended_products = []
         for pid in rec_product_ids:
             p_details = dataset['products'].get(pid, {})
@@ -395,7 +321,6 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
                 'probability': probs.get(pid, 0.85)
             })
             
-        # Get customer profile details
         user_profile = dataset['customers'].get(user_id, {})
         
         response = {
@@ -408,30 +333,11 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
         }
         
         self.handle_json_response(response)
-        
+
     def handle_json_response(self, data):
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode('utf-8'))
 
-def run_server():
-    load_saved_models()
-    
-    # Start server
-    socketserver.TCPServer.allow_reuse_address = True
-    handler = RecommendationAPIHandler
-    with socketserver.TCPServer(("127.0.0.1", PORT), handler) as httpd:
-        print(f"[Server] Premium Chocolate Recommendation Demo running at:")
-        print(f"👉 http://localhost:{PORT}/")
-        print("[Server] Press Ctrl+C to stop.")
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\n[Server] Shutting down.")
-
-if __name__ == '__main__':
-    run_server()
-
-if __name__ == '__main__':
-    run_server()
+handler = RecommendationAPIHandler

@@ -482,13 +482,54 @@
             }
         }
     </style>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
     <header>
         <h1>🍫 巧克力商店智能推荐沙盒</h1>
         <p>支持多算法对照、即时环境感知与工业级双级漏斗（召回+精排）架构的模拟器</p>
+        <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 1rem;">
+            <a href="/methodology" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1.2rem; background: rgba(212, 175, 55, 0.15); border: 1px solid var(--accent-gold); border-radius: 20px; color: var(--accent-gold); text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">
+                🛠️ 查看项目研发全景与算法探索
+            </a>
+            <a href="/en" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1.2rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 20px; color: var(--text-primary); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+                🌐 English Version
+            </a>
+        </div>
     </header>
+
+    <!-- Experimental Challenge Notice Banner -->
+    <div style="width: 100%; max-width: 1200px; margin-bottom: 2rem; background: linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(26,18,14,0.9) 100%); border: 1px solid var(--accent-gold); border-radius: 20px; padding: 1.5rem 2rem; box-shadow: var(--shadow-gold); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; animation: fadeInUp 0.8s ease;">
+        <div style="display: flex; align-items: flex-start; gap: 1.2rem; flex: 1; min-width: 300px;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(212,175,55,0.2); display: flex; align-items: center; justify-content: center; color: var(--accent-gold); font-size: 1.4rem; flex-shrink: 0;">
+                <i class="fa-solid fa-flask-vial"></i>
+            </div>
+            <div>
+                <h3 style="color: var(--accent-gold); font-size: 1.15rem; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem;">
+                    🧪 实验性质推荐算法项目与开发者挑战邀请
+                </h3>
+                <p style="color: var(--text-primary); font-size: 0.92rem; line-height: 1.6;">
+                    本系统是一个<b>探索推荐算法工程落地的实验沙盒</b>。我们极其鼓励你阅读详细的项目研发全景文档，并下载这个具有挑战性的<b>100万条真实交易数据集</b>（面临 90.1% 矩阵极度稀疏性与 1:199 样本不平衡）。欢迎你尝试构建更强特征或调优模型，挑战更高的推荐命中率与成功率！
+                </p>
+            </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.6rem; flex-shrink: 0; min-width: 260px;">
+            <a href="/methodology" style="padding: 0.6rem 1.2rem; background: var(--accent-gold); color: #000; font-weight: 700; text-decoration: none; border-radius: 12px; font-size: 0.88rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.3s ease;">
+                <i class="fa-solid fa-book-open"></i> 查看研发全景说明
+            </a>
+            <div style="display: flex; flex-direction: column; gap: 0.4rem; background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                <span style="font-size: 0.75rem; color: var(--accent-gold); font-weight: 700; text-transform: uppercase; text-align: center;"><i class="fa-solid fa-cloud-arrow-down"></i> 下载基准数据集 (共4张表)</span>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
+                    <a href="/api/download?file=sales.csv" style="padding: 0.4rem 0.6rem; background: rgba(46,204,113,0.2); color: #2ecc71; border: 1px solid rgba(46,204,113,0.4); font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 0.78rem; text-align: center;" title="1,000,000 条交易记录">sales.csv (100万条)</a>
+                    <a href="/api/download?file=products.csv" style="padding: 0.4rem 0.6rem; background: rgba(56,239,125,0.15); color: #38ef7d; border: 1px solid rgba(56,239,125,0.3); font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 0.78rem; text-align: center;" title="200 个商品SKU">products.csv</a>
+                    <a href="/api/download?file=customers.csv" style="padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.15); font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 0.78rem; text-align: center;" title="50,000 名注册用户">customers.csv</a>
+                    <a href="/api/download?file=stores.csv" style="padding: 0.4rem 0.6rem; background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.15); font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 0.78rem; text-align: center;" title="100 家门店信息">stores.csv</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="main-container">
         <!-- Control Panel -->
