@@ -434,6 +434,8 @@ class RecommendationAPIHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(json.dumps(data).encode('utf-8'))
 
 def run_server():
+    import __main__
+    __main__.MBARecommender = MBARecommender
     load_saved_models()
     
     # Start server

@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
-import lightgbm as lgb
+try:
+    import lightgbm as lgb
+    HAS_LGB = True
+except ImportError:
+    HAS_LGB = False
 import os
 from collections import defaultdict, Counter
 import sys
@@ -203,56 +207,82 @@ class LightGBMRecommender(BaseRecommender):
         self.model.fit(X, y)
         print("  LightGBM training complete.")
  
+    def predict_numpy(self, rows):
+        if not hasattr(self, 'np_trees') or self.np_trees is None:
+            if hasattr(self.model, 'booster_'):
+                d = self.model.booster_.dump_model()
+                self.np_trees = [t['tree_structure'] for t in d['tree_info']]
+            else:
+                return np.zeros(len(rows))
+        
+        def eval_node(node, row):
+            if 'leaf_value' in node:
+                return node['leaf_value']
+            feat_idx = node['split_feature']
+            val = row[feat_idx]
+            thresh = node['threshold']
+            decision_type = node.get('decision_type', '<=')
+            
+            if decision_type == '==':
+                cat_values = node.get('threshold', '')
+                if isinstance(cat_values, str):
+                    cat_list = [int(x) for x in cat_values.split('||')] if cat_values else []
+                elif isinstance(cat_values, (int, float)):
+                    cat_list = [int(cat_values)]
+                else:
+                    cat_list = []
+                go_left = int(val) in cat_list
+            else:
+                go_left = val <= thresh
+                
+            if go_left:
+                return eval_node(node['left_child'], row)
+            else:
+                return eval_node(node['right_child'], row)
+
+        probs = []
+        for row in rows:
+            raw_score = sum(eval_node(tree, row) for tree in self.np_trees)
+            prob = 1.0 / (1.0 + np.exp(-raw_score))
+            probs.append(prob)
+        return np.array(probs)
+
     def recommend(self, user_id, k=5, store_id=None, order_date=None):
         candidates = self.products_df.copy()
         num_candidates = len(candidates)
         
-        X_cand = pd.DataFrame()
-        
         u_stats = self.user_stats.get(user_id, {'user_total_purchases':0, 'user_avg_revenue':0.0, 'user_avg_discount':0.0})
         profile = self.customer_profiles.get(user_id, {'age': 35, 'gender': 'Unknown', 'loyalty_member': 0})
-        
-        X_cand['user_age'] = [profile['age']] * num_candidates
-        X_cand['user_gender'] = pd.Categorical([self.gender_map.get(profile['gender'], 2)] * num_candidates, categories=self.gender_categories)
-        X_cand['user_loyalty'] = pd.Categorical([profile['loyalty_member']] * num_candidates, categories=self.loyalty_categories)
-        
-        X_cand['item_cocoa'] = candidates['cocoa_percent'].fillna(0.0).values
-        X_cand['item_weight'] = candidates['weight_g'].fillna(0.0).values
-        X_cand['item_category'] = pd.Categorical(self._encode_series(candidates['category'], self.category_map, 5), categories=self.category_categories)
-        X_cand['item_brand'] = pd.Categorical(self._encode_series(candidates['brand'], self.brand_map, 6), categories=self.brand_categories)
-        
         stype = self.store_types.get(store_id, 'Unknown') if store_id else 'Unknown'
-        X_cand['store_type'] = pd.Categorical([self.store_type_map.get(stype, 4)] * num_candidates, categories=self.store_type_categories)
-        
         odate = pd.to_datetime(order_date) if order_date else pd.to_datetime('2024-11-15')
-        X_cand['day_of_week'] = pd.Categorical([odate.dayofweek] * num_candidates, categories=self.day_of_week_categories)
-        X_cand['month'] = pd.Categorical([odate.month] * num_candidates, categories=self.month_categories)
         
-        X_cand['user_total_purchases'] = [u_stats['user_total_purchases']] * num_candidates
-        X_cand['user_avg_revenue'] = [u_stats['user_avg_revenue']] * num_candidates
-        X_cand['user_avg_discount'] = [u_stats['user_avg_discount']] * num_candidates
-        
-        X_cand['item_total_sales'] = candidates['product_id'].map(lambda pid: self.item_stats.get(pid, {}).get('item_total_sales', 0))
-        X_cand['item_avg_discount'] = candidates['product_id'].map(lambda pid: self.item_stats.get(pid, {}).get('item_avg_discount', 0.0))
-        
-        X_cand['user_item_purchase_count'] = candidates['product_id'].map(lambda pid: self.user_item_counts.get((user_id, pid), 0))
-        X_cand['user_brand_purchase_count'] = candidates['brand'].map(lambda brand: self.user_brand_counts.get((user_id, brand), 0))
-        X_cand['user_category_purchase_count'] = candidates['category'].map(lambda cat: self.user_category_counts.get((user_id, cat), 0))
-        
-        cols_order = [
-            'user_age', 'user_gender', 'user_loyalty',
-            'item_cocoa', 'item_weight', 'item_category', 'item_brand',
-            'store_type', 'day_of_week', 'month',
-            'user_total_purchases', 'user_avg_revenue', 'user_avg_discount',
-            'item_total_sales', 'item_avg_discount',
-            'user_item_purchase_count', 'user_brand_purchase_count', 'user_category_purchase_count'
-        ]
-        X_cand = X_cand[cols_order]
-        
-        probs = self.model.predict_proba(X_cand)[:, 1]
+        rows = []
+        for _, cand in candidates.iterrows():
+            row = [
+                profile['age'],
+                self.gender_map.get(profile['gender'], 2),
+                profile['loyalty_member'],
+                cand['cocoa_percent'] if not pd.isna(cand['cocoa_percent']) else 0.0,
+                cand['weight_g'] if not pd.isna(cand['weight_g']) else 0.0,
+                self.category_map.get(cand['category'], 5),
+                self.brand_map.get(cand['brand'], 6),
+                self.store_type_map.get(stype, 4),
+                odate.dayofweek,
+                odate.month,
+                u_stats['user_total_purchases'],
+                u_stats['user_avg_revenue'],
+                u_stats['user_avg_discount'],
+                self.item_stats.get(cand['product_id'], {}).get('item_total_sales', 0),
+                self.item_stats.get(cand['product_id'], {}).get('item_avg_discount', 0.0),
+                self.user_item_counts.get((user_id, cand['product_id']), 0),
+                self.user_brand_counts.get((user_id, cand['brand']), 0),
+                self.user_category_counts.get((user_id, cand['category']), 0)
+            ]
+            rows.append(row)
+            
+        probs = self.predict_numpy(rows)
         candidates['pred_prob'] = probs
         ranked = candidates.sort_values(by='pred_prob', ascending=False)
-        
         return ranked['product_id'].head(k).tolist()
 
     def fit_extra(self, train_sales, products, customers, stores):

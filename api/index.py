@@ -93,6 +93,8 @@ IS_XGB_FALLBACK = False
 
 # Preload models on cold start
 try:
+    import __main__
+    __main__.MBARecommender = MBARecommender
     load_saved_models()
 except Exception as e:
     print(f"[Vercel Initialization Warning] {e}")
@@ -224,40 +226,33 @@ class handler(http.server.BaseHTTPRequestHandler):
                 candidates = model_obj.products_df[model_obj.products_df['product_id'].isin(rec_product_ids)].copy()
                 num_candidates = len(candidates)
                 if num_candidates > 0:
-                    X_cand = pd.DataFrame()
                     u_stats = model_obj.user_stats.get(user_id, {'user_total_purchases':0, 'user_avg_revenue':0.0, 'user_avg_discount':0.0})
                     profile = model_obj.customer_profiles.get(user_id, {'age': 35, 'gender': 'Unknown', 'loyalty_member': 0})
-                    X_cand['user_age'] = [profile['age']] * num_candidates
-                    X_cand['user_gender'] = pd.Categorical([model_obj.gender_map.get(profile['gender'], 2)] * num_candidates, categories=model_obj.gender_categories)
-                    X_cand['user_loyalty'] = pd.Categorical([profile['loyalty_member']] * num_candidates, categories=model_obj.loyalty_categories)
-                    X_cand['item_cocoa'] = candidates['cocoa_percent'].fillna(0.0).values
-                    X_cand['item_weight'] = candidates['weight_g'].fillna(0.0).values
-                    X_cand['item_category'] = pd.Categorical(model_obj._encode_series(candidates['category'], model_obj.category_map, 5), categories=model_obj.category_categories)
-                    X_cand['item_brand'] = pd.Categorical(model_obj._encode_series(candidates['brand'], model_obj.brand_map, 6), categories=model_obj.brand_categories)
                     stype = model_obj.store_types.get(store_id, 'Unknown') if store_id else 'Unknown'
-                    X_cand['store_type'] = pd.Categorical([model_obj.store_type_map.get(stype, 4)] * num_candidates, categories=model_obj.store_type_categories)
-                    odate = pd.to_datetime('2024-11-15')
-                    X_cand['day_of_week'] = pd.Categorical([odate.dayofweek] * num_candidates, categories=model_obj.day_of_week_categories)
-                    X_cand['month'] = pd.Categorical([odate.month] * num_candidates, categories=model_obj.month_categories)
-                    X_cand['user_total_purchases'] = [u_stats['user_total_purchases']] * num_candidates
-                    X_cand['user_avg_revenue'] = [u_stats['user_avg_revenue']] * num_candidates
-                    X_cand['user_avg_discount'] = [u_stats['user_avg_discount']] * num_candidates
-                    X_cand['item_total_sales'] = candidates['product_id'].map(lambda pid: model_obj.item_stats.get(pid, {}).get('item_total_sales', 0))
-                    X_cand['item_avg_discount'] = candidates['product_id'].map(lambda pid: model_obj.item_stats.get(pid, {}).get('item_avg_discount', 0.0))
-                    X_cand['user_item_purchase_count'] = candidates['product_id'].map(lambda pid: model_obj.user_item_counts.get((user_id, pid), 0))
-                    X_cand['user_brand_purchase_count'] = candidates['brand'].map(lambda brand: model_obj.user_brand_counts.get((user_id, brand), 0))
-                    X_cand['user_category_purchase_count'] = candidates['category'].map(lambda cat: model_obj.user_category_counts.get((user_id, cat), 0))
                     
-                    cols_order = [
-                        'user_age', 'user_gender', 'user_loyalty',
-                        'item_cocoa', 'item_weight', 'item_category', 'item_brand',
-                        'store_type', 'day_of_week', 'month',
-                        'user_total_purchases', 'user_avg_revenue', 'user_avg_discount',
-                        'item_total_sales', 'item_avg_discount',
-                        'user_item_purchase_count', 'user_brand_purchase_count', 'user_category_purchase_count'
-                    ]
-                    X_cand = X_cand[cols_order]
-                    pred_probs = model_obj.model.predict_proba(X_cand)[:, 1]
+                    rows = []
+                    for _, cand in candidates.iterrows():
+                        row = [
+                            profile['age'],
+                            model_obj.gender_map.get(profile['gender'], 2),
+                            profile['loyalty_member'],
+                            cand['cocoa_percent'] if not pd.isna(cand['cocoa_percent']) else 0.0,
+                            cand['weight_g'] if not pd.isna(cand['weight_g']) else 0.0,
+                            model_obj.category_map.get(cand['category'], 5),
+                            model_obj.brand_map.get(cand['brand'], 6),
+                            model_obj.store_type_map.get(stype, 4),
+                            4, 11,
+                            u_stats['user_total_purchases'],
+                            u_stats['user_avg_revenue'],
+                            u_stats['user_avg_discount'],
+                            model_obj.item_stats.get(cand['product_id'], {}).get('item_total_sales', 0),
+                            model_obj.item_stats.get(cand['product_id'], {}).get('item_avg_discount', 0.0),
+                            model_obj.user_item_counts.get((user_id, cand['product_id']), 0),
+                            model_obj.user_brand_counts.get((user_id, cand['brand']), 0),
+                            model_obj.user_category_counts.get((user_id, cand['category']), 0)
+                        ]
+                        rows.append(row)
+                    pred_probs = model_obj.predict_numpy(rows)
                     for pid, prob in zip(candidates['product_id'], pred_probs):
                         probs[pid] = float(prob)
                         

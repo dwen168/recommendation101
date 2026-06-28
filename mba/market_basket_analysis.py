@@ -60,5 +60,23 @@ def run_mba():
     else:
         print("No frequent itemsets found even with lower support.")
 
+class MBARecommender:
+    def __init__(self):
+        self.rules = {}
+        self.popular_items = []
+        self.user_items = {}
+
+    def recommend(self, user_id, k=5, store_id=None, order_date=None):
+        history = self.user_items.get(user_id, set())
+        candidates = {}
+        for hist_item in history:
+            for sim_item, lift in self.rules.get(hist_item, []):
+                if sim_item not in history:
+                    candidates[sim_item] = candidates.get(sim_item, 0.0) + lift
+        if not candidates:
+            return self.popular_items[:k]
+        sorted_cands = sorted(candidates.items(), key=lambda x: x[1], reverse=True)
+        return [item for item, _ in sorted_cands[:k]]
+
 if __name__ == "__main__":
     run_mba()
