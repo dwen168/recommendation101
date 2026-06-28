@@ -235,9 +235,7 @@ class handler(http.server.BaseHTTPRequestHandler):
                         probs[pid] = float(prob)
                         
             elif model_name == 'neural':
-                import torch
                 model_obj = recommenders['neural']
-                model_obj.model.eval()
                 user_idx = model_obj.user_to_idx.get(user_id, model_obj.user_to_idx['UNKNOWN_USER'])
                 profile = model_obj.customer_profiles.get(user_id, {'age': 35, 'gender': 'Unknown', 'loyalty_member': 0})
                 candidates = model_obj.products_df[model_obj.products_df['product_id'].isin(rec_product_ids)].copy()
@@ -263,16 +261,11 @@ class handler(http.server.BaseHTTPRequestHandler):
                     cont_features = np.stack([age_norm, loyalty_norm, cocoa_norm, weight_norm], axis=1)
                     aux_features = np.concatenate([cont_features, gender_onehot, brand_onehot, cat_onehot], axis=1).astype(np.float32)
                     
-                    u_tensor = torch.tensor([user_idx] * num_candidates, dtype=torch.long).to(model_obj.device)
                     item_unknown_idx = model_obj.item_to_idx['UNKNOWN_ITEM']
-                    i_tensor = torch.tensor([model_obj.item_to_idx.get(pid, item_unknown_idx) for pid in candidates['product_id']], dtype=torch.long).to(model_obj.device)
-                    f_tensor = torch.tensor(aux_features, dtype=torch.float32).to(model_obj.device)
+                    user_indices = np.array([user_idx] * num_candidates, dtype=int)
+                    item_indices = np.array([model_obj.item_to_idx.get(pid, item_unknown_idx) for pid in candidates['product_id']], dtype=int)
                     
-                    with torch.no_grad():
-                        preds = model_obj.model(u_tensor, i_tensor, f_tensor)
-                        if preds.dim() == 0:
-                            preds = preds.unsqueeze(0)
-                        preds = preds.cpu().numpy()
+                    preds = model_obj.predict_numpy(user_indices, item_indices, aux_features)
                     for pid, prob in zip(candidates['product_id'], preds):
                         probs[pid] = float(prob)
                         

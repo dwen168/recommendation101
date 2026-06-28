@@ -1,53 +1,58 @@
 import pandas as pd
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
 import os
 import sys
+
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import Dataset, DataLoader
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
 
 # Add parent dir to path for BaseRecommender
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from evaluate import BaseRecommender
 
-class ChocolateDataset(Dataset):
-    def __init__(self, users, items, features, labels):
-        self.users = torch.tensor(users, dtype=torch.long)
-        self.items = torch.tensor(items, dtype=torch.long)
-        self.features = torch.tensor(features, dtype=torch.float32)
-        self.labels = torch.tensor(labels, dtype=torch.float32)
+if HAS_TORCH:
+    class ChocolateDataset(Dataset):
+        def __init__(self, users, items, features, labels):
+            self.users = torch.tensor(users, dtype=torch.long)
+            self.items = torch.tensor(items, dtype=torch.long)
+            self.features = torch.tensor(features, dtype=torch.float32)
+            self.labels = torch.tensor(labels, dtype=torch.float32)
 
-    def __len__(self):
-        return len(self.labels)
+        def __len__(self):
+            return len(self.labels)
 
-    def __getitem__(self, idx):
-        return self.users[idx], self.items[idx], self.features[idx], self.labels[idx]
+        def __getitem__(self, idx):
+            return self.users[idx], self.items[idx], self.features[idx], self.labels[idx]
 
-class NCFModel(nn.Module):
-    def __init__(self, num_users, num_items, aux_feat_dim, embed_dim=16):
-        super(NCFModel, self).__init__()
-        self.user_embed = nn.Embedding(num_users, embed_dim)
-        self.item_embed = nn.Embedding(num_items, embed_dim)
-        
-        # MLP Layers
-        self.mlp = nn.Sequential(
-            nn.Linear(embed_dim * 2 + aux_feat_dim, 64),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid()
-        )
+    class NCFModel(nn.Module):
+        def __init__(self, num_users, num_items, aux_feat_dim, embed_dim=16):
+            super(NCFModel, self).__init__()
+            self.user_embed = nn.Embedding(num_users, embed_dim)
+            self.item_embed = nn.Embedding(num_items, embed_dim)
+            
+            # MLP Layers
+            self.mlp = nn.Sequential(
+                nn.Linear(embed_dim * 2 + aux_feat_dim, 64),
+                nn.ReLU(),
+                nn.Dropout(0.2),
+                nn.Linear(64, 32),
+                nn.ReLU(),
+                nn.Linear(32, 1),
+                nn.Sigmoid()
+            )
 
-    def forward(self, user_indices, item_indices, aux_features):
-        user_vec = self.user_embed(user_indices)
-        item_vec = self.item_embed(item_indices)
-        
-        combined = torch.cat([user_vec, item_vec, aux_features], dim=1)
-        # Use view(-1) instead of squeeze() to avoid batch dimension squeezing bugs when batch size = 1
-        return self.mlp(combined).view(-1)
+        def forward(self, user_indices, item_indices, aux_features):
+            user_vec = self.user_embed(user_indices)
+            item_vec = self.item_embed(item_indices)
+            
+            combined = torch.cat([user_vec, item_vec, aux_features], dim=1)
+            return self.mlp(combined).view(-1)
 
 class NeuralRecommender(BaseRecommender):
     def __init__(self, embed_dim=16, epochs=5, batch_size=256, lr=0.001):
@@ -60,13 +65,16 @@ class NeuralRecommender(BaseRecommender):
         self.item_to_idx = {}
         
         self.model = None
+        self.np_weights = None
         self.products_df = None
         
-        # Enable GPU: CUDA for Nvidia. Avoid MPS on macOS as it is known to deadlock/hang forever in subprocesses.
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda")
+        if HAS_TORCH:
+            if torch.cuda.is_available():
+                self.device = torch.device("cuda")
+            else:
+                self.device = torch.device("cpu")
         else:
-            self.device = torch.device("cpu")
+            self.device = "cpu"
         
         # Mappings for categorical features
         self.gender_map = {'Male': 0, 'Female': 1, 'Unknown': 2}
@@ -170,13 +178,41 @@ class NeuralRecommender(BaseRecommender):
                 total_loss += loss.item()
             
             print(f"Epoch {epoch+1}/{self.epochs}, Loss: {total_loss/len(dataloader):.4f}")
+        self.extract_np_weights()
+
+    def extract_np_weights(self):
+        if self.model is not None:
+            sd = self.model.state_dict()
+            self.np_weights = {
+                'user_embed': sd['user_embed.weight'].cpu().numpy(),
+                'item_embed': sd['item_embed.weight'].cpu().numpy(),
+                'w0': sd['mlp.0.weight'].cpu().numpy(),
+                'b0': sd['mlp.0.bias'].cpu().numpy(),
+                'w3': sd['mlp.3.weight'].cpu().numpy(),
+                'b3': sd['mlp.3.bias'].cpu().numpy(),
+                'w5': sd['mlp.5.weight'].cpu().numpy(),
+                'b5': sd['mlp.5.bias'].cpu().numpy()
+            }
+
+    def predict_numpy(self, user_indices, item_indices, aux_features):
+        if self.np_weights is None:
+            if self.model is not None:
+                self.extract_np_weights()
+            else:
+                return np.zeros(len(user_indices))
+        sd = self.np_weights
+        u_vec = sd['user_embed'][user_indices]
+        i_vec = sd['item_embed'][item_indices]
+        comb = np.concatenate([u_vec, i_vec, aux_features], axis=1)
+        h1 = np.maximum(0, np.dot(comb, sd['w0'].T) + sd['b0'])
+        h2 = np.maximum(0, np.dot(h1, sd['w3'].T) + sd['b3'])
+        out = np.dot(h2, sd['w5'].T) + sd['b5']
+        return 1.0 / (1.0 + np.exp(-out.ravel()))
 
     def recommend(self, user_id, k=5, store_id=None, order_date=None):
-        if self.model is None:
+        if self.model is None and self.np_weights is None:
             return []
             
-        self.model.eval()
-        
         user_idx = self.user_to_idx.get(user_id, self.user_to_idx['UNKNOWN_USER'])
         profile = self.customer_profiles.get(user_id, {'age': 35, 'gender': 'Unknown', 'loyalty_member': 0})
         
@@ -205,16 +241,11 @@ class NeuralRecommender(BaseRecommender):
         cont_features = np.stack([age_norm, loyalty_norm, cocoa_norm, weight_norm], axis=1)
         aux_features = np.concatenate([cont_features, gender_onehot, brand_onehot, cat_onehot], axis=1).astype(np.float32)
         
-        u_tensor = torch.tensor([user_idx] * num_candidates, dtype=torch.long).to(self.device)
         item_unknown_idx = self.item_to_idx['UNKNOWN_ITEM']
-        i_tensor = torch.tensor([self.item_to_idx.get(pid, item_unknown_idx) for pid in cand_df['product_id']], dtype=torch.long).to(self.device)
-        f_tensor = torch.tensor(aux_features, dtype=torch.float32).to(self.device)
+        user_indices = np.array([user_idx] * num_candidates, dtype=int)
+        item_indices = np.array([self.item_to_idx.get(pid, item_unknown_idx) for pid in cand_df['product_id']], dtype=int)
         
-        with torch.no_grad():
-            preds = self.model(u_tensor, i_tensor, f_tensor)
-            if preds.dim() == 0:
-                preds = preds.unsqueeze(0)
-            preds = preds.cpu().numpy()
+        preds = self.predict_numpy(user_indices, item_indices, aux_features)
             
         cand_df['score'] = preds
         top_k = cand_df.sort_values('score', ascending=False).head(k)['product_id'].tolist()
