@@ -9,7 +9,7 @@ try:
     import torch.optim as optim
     from torch.utils.data import Dataset, DataLoader
     HAS_TORCH = True
-except ImportError:
+except Exception:
     HAS_TORCH = False
 
 # Add parent dir to path for BaseRecommender
