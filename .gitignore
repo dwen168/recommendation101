@@ -42,6 +42,3 @@ env/
 # Temporary files
 tmp/
 temp/
-
-# Generated models
-simulation/models/
