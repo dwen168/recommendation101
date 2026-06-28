@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.matplotlib
+eda.py
+calculate_auc.py
+run_comparison.py
+model_comparison_results.md

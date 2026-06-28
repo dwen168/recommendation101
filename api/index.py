@@ -123,6 +123,22 @@ class handler(http.server.BaseHTTPRequestHandler):
             self.send_error(400, "Invalid file requested")
             return
         file_path = os.path.join(base_path, "rawdata", filename)
+        if not os.path.exists(file_path) and filename == 'sales.csv':
+            gz_path = os.path.join(base_path, "rawdata", "sales.csv.gz")
+            if os.path.exists(gz_path):
+                try:
+                    import gzip
+                    with gzip.open(gz_path, 'rb') as f:
+                        content = f.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/csv; charset=utf-8")
+                    self.send_header("Content-Disposition", f"attachment; filename={filename}")
+                    self.end_headers()
+                    self.wfile.write(content)
+                    return
+                except Exception as e:
+                    self.send_error(500, f"Error downloading file: {str(e)}")
+                    return
         if not os.path.exists(file_path):
             self.send_error(404, "File not found")
             return
