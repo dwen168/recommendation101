@@ -126,21 +126,23 @@ class handler(http.server.BaseHTTPRequestHandler):
             if k not in query:
                 query[k] = v
         
-        full_check_str = f"{path} {raw_path} {headers_str}".lower()
+        all_text = f"{path} {raw_path} {headers_str} {' '.join(query.keys())}".lower()
         
-        if "recommend" in full_check_str or 'store_id' in query or 'user_id' in query or 'model' in query:
-            self.handle_recommend(query)
-        elif "customers" in full_check_str:
+        if "customers" in all_text:
             self.handle_json_response(dataset.get('sample_customers', []))
-        elif "stores" in full_check_str:
+        elif "stores" in all_text:
             self.handle_json_response(dataset.get('sample_stores', []))
-        elif "products" in full_check_str:
+        elif "products" in all_text:
             self.handle_json_response(dataset.get('products', {}))
-        elif "download" in full_check_str:
+        elif "download" in all_text:
             self.handle_download(query)
-        else:
-            # Default to handle_recommend for root API invocation on Vercel
+        elif "recommend" in all_text or 'store_id' in query or 'user_id' in query or 'model' in query:
             self.handle_recommend(query)
+        else:
+            if 'user_id' in query or 'store_id' in query:
+                self.handle_recommend(query)
+            else:
+                self.handle_json_response({"status": "ok", "message": "Chocolate Recommender API Operational"})
 
     def handle_download(self, query):
         filename = query.get('file', [None])[0]
@@ -180,15 +182,11 @@ class handler(http.server.BaseHTTPRequestHandler):
             self.send_error(500, f"Error downloading file: {str(e)}")
 
     def handle_recommend(self, query):
-        user_id = query.get('user_id', [None])[0]
-        store_id = query.get('store_id', [None])[0]
+        user_id = query.get('user_id', [None])[0] or 'C00001'
+        store_id = query.get('store_id', [None])[0] or 'S001'
         model_name = query.get('model', ['lightgbm'])[0]
         gender = query.get('gender', [None])[0]
         age = query.get('age', [None])[0]
-        
-        if not user_id:
-            self.send_error(400, "Missing user_id parameter")
-            return
             
         if user_id not in dataset['customers']:
             parsed_age = int(age) if age else 35
