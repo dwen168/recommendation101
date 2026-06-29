@@ -1383,7 +1383,7 @@
                 </div>
                 <button class="nav-btn nav-btn-primary" onclick="window.openAlgorithmTradeoffModal()"
                     style="white-space:nowrap; padding:0.65rem 1.2rem; display:inline-flex; align-items:center; gap:0.5rem; font-size:0.9rem; cursor:pointer;">
-                    <i class="fa-solid fa-brain"></i> 🧠 Attribution: Why LightGBM Wins & Neural Lags?
+                    <i class="fa-solid fa-brain"></i> 🧠 Attribution: Why GBDT Trees Excel & Neural Lags?
                 </button>
             </div>
 
@@ -1416,32 +1416,32 @@
                                     style="color:var(--accent-gold); text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; font-weight:700;">XGBoost
                                     Ranking <i class="fa-solid fa-book-bookmark"
                                         style="font-size:0.8rem; opacity:0.8;"></i></a></td>
-                            <td class="metric-tag">1.07%</td>
-                            <td class="metric-tag">2.51%</td>
-                            <td class="metric-tag">5.20%</td>
-                            <td>2.96 ms</td>
-                            <td><b>Ranking Alternative</b>: High interpretability feature fitting</td>
+                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">1.10% (Highest)</td>
+                            <td class="metric-tag">2.56%</td>
+                            <td class="metric-tag">5.30%</td>
+                            <td>10.41 ms</td>
+                            <td><b>Ranking Champion</b>: Top accuracy and F1-score optimization</td>
                         </tr>
                         <tr>
                             <td><a href="javascript:void(0)" onclick="fetchAlgorithmReadme('lightgbm')"
                                     style="color:var(--accent-gold); text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; font-weight:700;">LightGBM
                                     Ranking <i class="fa-solid fa-book-bookmark"
                                         style="font-size:0.8rem; opacity:0.8;"></i></a></td>
-                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">1.15% (Highest)</td>
-                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">2.65%</td>
-                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">5.70%</td>
-                            <td>3.09 ms</td>
-                            <td><b>Ranking Champion</b>: Optimal balance of accuracy and fast training</td>
+                            <td class="metric-tag">1.09%</td>
+                            <td class="metric-tag">2.57%</td>
+                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">5.35% (Highest)</td>
+                            <td>15.20 ms</td>
+                            <td><b>Ranking Co-Champion</b>: Highest HitRate & efficient feature fitting</td>
                         </tr>
                         <tr>
                             <td><a href="javascript:void(0)" onclick="fetchAlgorithmReadme('neural')"
                                     style="color:var(--accent-gold); text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; font-weight:700;">Neural
                                     NCF (PyTorch) <i class="fa-solid fa-book-bookmark"
                                         style="font-size:0.8rem; opacity:0.8;"></i></a></td>
-                            <td class="metric-tag">0.84%</td>
-                            <td class="metric-tag">1.99%</td>
-                            <td class="metric-tag">4.15%</td>
-                            <td>0.50 ms</td>
+                            <td class="metric-tag">0.91%</td>
+                            <td class="metric-tag">2.01%</td>
+                            <td class="metric-tag">4.45%</td>
+                            <td>0.45 ms</td>
                             <td><b>Embedding Provider</b>: Captures non-linear deep interactions & generalization</td>
                         </tr>
                     </tbody>
@@ -1661,12 +1661,12 @@
             body.innerHTML = `
                 <div style="border-bottom: 1px solid var(--border-glow); padding-bottom: 1rem; margin-bottom: 1.5rem;">
                     <span style="color:var(--accent-gold); font-weight:700; font-size:0.85rem; text-transform:uppercase;">Deep Performance Attribution Analysis</span>
-                    <h2 style="color:var(--accent-gold); font-size:1.8rem; margin-top:0.3rem;"><i class="fa-solid fa-scale-balanced"></i> Benchmark Attribution: Why LightGBM Wins & Neural Lags?</h2>
+                    <h2 style="color:var(--accent-gold); font-size:1.8rem; margin-top:0.3rem;"><i class="fa-solid fa-scale-balanced"></i> Benchmark Attribution: Why GBDT Trees Excel & Neural Lags?</h2>
                 </div>
                 <div style="font-size:0.98rem; line-height:1.8; color:var(--text-primary);">
                     <div style="background:rgba(212,175,55,0.1); padding:1.2rem; border-radius:12px; border:1px solid var(--border-glow); margin-bottom:1.5rem;">
                         <b style="color:var(--accent-gold); font-size:1.05rem;"><i class="fa-solid fa-circle-info"></i> Empirical Benchmark Perspective:</b><br/>
-                        In unified offline evaluation, <b>LightGBM Ranking</b> achieved top accuracy with <b>Precision@5 = 1.15%</b> and <b>HitRate@5 = 5.70%</b>, while PyTorch-based <b>Neural NCF</b> scored Precision@5 of <b>0.84%</b>. This gap is not an anomaly, but a fundamental phenomenon in recommendation engineering!
+                        In unified offline evaluation, <b>GBDT Tree Models (XGBoost / LightGBM)</b> achieved top accuracy with <b>Precision@5 = 1.10%</b> and <b>HitRate@5 = 5.35%</b>, while PyTorch-based <b>Neural NCF</b> scored Precision@5 of <b>0.91%</b>. This gap is not an anomaly, but a fundamental phenomenon in recommendation engineering!
                     </div>
 
                     <h3 style="color:#e74c3c; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-triangle-exclamation"></i> 1. Why Deep Learning (Neural NCF) scores lower offline?</h3>
@@ -1675,7 +1675,7 @@
                         <li><b>Data Scale vs Model Parameter Capacity</b>: Neural NCF uses large Embedding matrices and MLP layers. Deep models require billions of data logs; on million-level offline datasets, they suffer from implicit overfitting or optimization challenges.</li>
                     </ul>
 
-                    <h3 style="color:#2ecc71; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-trophy"></i> 2. Why LightGBM wins the ranking championship?</h3>
+                    <h3 style="color:#2ecc71; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-trophy"></i> 2. Why GBDT tree models win the ranking championship?</h3>
                     <ul style="padding-left:1.2rem; margin-bottom:1.5rem; display:flex; flex-direction:column; gap:0.8rem;">
                         <li><b>Leaf-wise Splitting Advantage</b>: Unlike traditional level-wise XGBoost, LightGBM splits nodes by maximum loss reduction, capturing complex non-linear feature interactions at shallower tree depths.</li>
                         <li><b>Native Categorical Handling</b>: LightGBM handles high-cardinality brand and category features directly via internal histogram binning without expensive one-hot expansion.</li>

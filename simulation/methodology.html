@@ -969,7 +969,7 @@
                     </div>
                 </div>
                 <button class="nav-btn nav-btn-primary" onclick="window.openAlgorithmTradeoffModal()" style="white-space:nowrap; padding:0.65rem 1.2rem; display:inline-flex; align-items:center; gap:0.5rem; font-size:0.9rem; cursor:pointer;">
-                    <i class="fa-solid fa-brain"></i> 🧠 归因剖析：为什么 LightGBM 夺冠而 Neural 较弱？
+                    <i class="fa-solid fa-brain"></i> 🧠 归因剖析：为什么 GBDT 树模型表现突出而 Neural 较弱？
                 </button>
             </div>
 
@@ -996,26 +996,26 @@
                         </tr>
                         <tr>
                             <td><a href="javascript:void(0)" onclick="fetchAlgorithmReadme('xgboost')" style="color:var(--accent-gold); text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; font-weight:700;">XGBoost Ranking <i class="fa-solid fa-book-bookmark" style="font-size:0.8rem; opacity:0.8;"></i></a></td>
-                            <td class="metric-tag">1.07%</td>
-                            <td class="metric-tag">2.51%</td>
-                            <td class="metric-tag">5.20%</td>
-                            <td>2.96 ms</td>
-                            <td><b>精排备选</b>：高可解释性特征拟合</td>
+                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">1.10% (最高)</td>
+                            <td class="metric-tag">2.56%</td>
+                            <td class="metric-tag">5.30%</td>
+                            <td>10.41 ms</td>
+                            <td><b>精排王者 (Ranking)</b>：准确率与 F1-Score 表现最优秀</td>
                         </tr>
                         <tr>
                             <td><a href="javascript:void(0)" onclick="fetchAlgorithmReadme('lightgbm')" style="color:var(--accent-gold); text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; font-weight:700;">LightGBM Ranking <i class="fa-solid fa-book-bookmark" style="font-size:0.8rem; opacity:0.8;"></i></a></td>
-                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">1.15% (最高)</td>
-                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">2.65%</td>
-                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">5.70%</td>
-                            <td>3.09 ms</td>
-                            <td><b>精排王者 (Ranking)</b>：高准确度与极速训练平衡</td>
+                            <td class="metric-tag">1.09%</td>
+                            <td class="metric-tag">2.57%</td>
+                            <td class="metric-tag" style="color:#f39c12; font-weight:700;">5.35% (最高)</td>
+                            <td>15.20 ms</td>
+                            <td><b>精排双雄 (Ranking)</b>：命中率最高与高效特征工程</td>
                         </tr>
                         <tr>
                             <td><a href="javascript:void(0)" onclick="fetchAlgorithmReadme('neural')" style="color:var(--accent-gold); text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; font-weight:700;">Neural NCF (PyTorch) <i class="fa-solid fa-book-bookmark" style="font-size:0.8rem; opacity:0.8;"></i></a></td>
-                            <td class="metric-tag">0.84%</td>
-                            <td class="metric-tag">1.99%</td>
-                            <td class="metric-tag">4.15%</td>
-                            <td>0.50 ms</td>
+                            <td class="metric-tag">0.91%</td>
+                            <td class="metric-tag">2.01%</td>
+                            <td class="metric-tag">4.45%</td>
+                            <td>0.45 ms</td>
                             <td><b>隐向量提取</b>：解决深层非线性交叉与泛化</td>
                         </tr>
                     </tbody>
@@ -1218,12 +1218,12 @@
             body.innerHTML = `
                 <div style="border-bottom: 1px solid var(--border-glow); padding-bottom: 1rem; margin-bottom: 1.5rem;">
                     <span style="color:var(--accent-gold); font-weight:700; font-size:0.85rem; text-transform:uppercase;">Deep Performance Attribution Analysis</span>
-                    <h2 style="color:var(--accent-gold); font-size:1.8rem; margin-top:0.3rem;"><i class="fa-solid fa-scale-balanced"></i> 多算法实测对比归因：为什么 LightGBM 夺冠而 Neural 较弱？</h2>
+                    <h2 style="color:var(--accent-gold); font-size:1.8rem; margin-top:0.3rem;"><i class="fa-solid fa-scale-balanced"></i> 多算法实测对比归因：为什么 GBDT 树模型表现突出而 Neural 较弱？</h2>
                 </div>
                 <div style="font-size:0.98rem; line-height:1.8; color:var(--text-primary);">
                     <div style="background:rgba(212,175,55,0.1); padding:1.2rem; border-radius:12px; border:1px solid var(--border-glow); margin-bottom:1.5rem;">
                         <b style="color:var(--accent-gold); font-size:1.05rem;"><i class="fa-solid fa-circle-info"></i> 实测数据现象视角：</b><br/>
-                        在统一测试集中，<b>LightGBM Ranking</b> 取得了最高准确率 <b>Precision@5 = 1.15%</b> 与 <b>HitRate@5 = 5.70%</b>；而基于 PyTorch 的 <b>Neural NCF</b> 的 Precision@5 为 <b>0.84%</b>。这种差异并非程序异常，而是推荐系统与数据科学领域的经典现象！
+                        在统一测试集中，<b>GBDT 树模型 (XGBoost / LightGBM)</b> 取得了最高准确率 <b>Precision@5 = 1.10%</b> 与 <b>HitRate@5 = 5.35%</b>；而基于 PyTorch 的 <b>Neural NCF</b> 的 Precision@5 为 <b>0.91%</b>。这种差异并非程序异常，而是推荐系统与数据科学领域的经典现象！
                     </div>
 
                     <h3 style="color:#e74c3c; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-triangle-exclamation"></i> 1. 为什么深度学习 (Neural NCF) 在离线指标上相对较低？</h3>
@@ -1232,7 +1232,7 @@
                         <li><b>数据量级与模型参数过拟合 (Data Scale & Overfitting)</b>：Neural NCF 包含大尺度的用户/商品 Embedding 矩阵和多层 MLP。深度神经网络极其“吃数据”（通常需要十亿级数据流），在百万级中等离线样本中容易出现隐式过拟合。</li>
                     </ul>
 
-                    <h3 style="color:#2ecc71; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-trophy"></i> 2. 为什么 LightGBM 能够夺得精排冠军？</h3>
+                    <h3 style="color:#2ecc71; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-trophy"></i> 2. 为什么 GBDT 树模型能够赢得精排硬实力？</h3>
                     <ul style="padding-left:1.2rem; margin-bottom:1.5rem; display:flex; flex-direction:column; gap:0.8rem;">
                         <li><b>Leaf-wise 按叶子生长的分割优势</b>：相比传统 XGBoost 按层生长，LightGBM 采用按叶子生长策略，优先分裂增益最大的节点，在更浅的树深度下找到最大损失下降点。</li>
                         <li><b>原生类别特征支持 (Native Categoricals)</b>：LightGBM 无需对商品品类、性别做昂贵的 One-Hot 展平，直接在内部按直方图分箱划分，完美保留了交叉特征关联。</li>
