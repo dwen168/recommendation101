@@ -205,6 +205,7 @@ class XGBoostRecommender(BaseRecommender):
         )
         self.model.fit(X, y)
         print("  XGBoost training complete.")
+        self.extract_and_clear_model()
  
     def recommend(self, user_id, k=5, store_id=None, order_date=None):
         # We need to rank all 202 product candidates for this user
@@ -266,8 +267,43 @@ class XGBoostRecommender(BaseRecommender):
         ]
         X_cand = X_cand[cols_order]
         
-        # Predict probability of purchase
-        probs = self.model.predict_proba(X_cand)[:, 1]
+        # Predict probability of purchase:
+        # If model is available (local training env), use it directly.
+        # If model was cleared for cloud deployment, use pre-extracted numpy trees.
+        if self.model is not None:
+            probs = self.model.predict_proba(X_cand)[:, 1]
+        elif hasattr(self, 'np_trees') and self.np_trees is not None:
+            rows = []
+            prod_ids = candidates['product_id'].values
+            brands = candidates['brand'].values
+            cats = candidates['category'].values
+            cocoas = candidates['cocoa_percent'].fillna(0.0).values
+            weights = candidates['weight_g'].fillna(0.0).values
+            for i in range(num_candidates):
+                row = [
+                    profile['age'],
+                    self.gender_map.get(profile['gender'], 2),
+                    int(profile['loyalty_member']),
+                    cocoas[i],
+                    weights[i],
+                    self.category_map.get(cats[i], 5),
+                    self.brand_map.get(brands[i], 6),
+                    self.store_type_map.get(stype, 4),
+                    odate.dayofweek,
+                    odate.month,
+                    u_stats['user_total_purchases'],
+                    u_stats['user_avg_revenue'],
+                    u_stats['user_avg_discount'],
+                    self.item_stats.get(prod_ids[i], {}).get('item_total_sales', 0),
+                    self.item_stats.get(prod_ids[i], {}).get('item_avg_discount', 0.0),
+                    self.user_item_counts.get((user_id, prod_ids[i]), 0),
+                    self.user_brand_counts.get((user_id, brands[i]), 0),
+                    self.user_category_counts.get((user_id, cats[i]), 0),
+                ]
+                rows.append(row)
+            probs = self.predict_numpy(rows)
+        else:
+            probs = np.zeros(num_candidates)
         
         # Rank candidates
         candidates['pred_prob'] = probs
@@ -275,12 +311,79 @@ class XGBoostRecommender(BaseRecommender):
         
         return ranked['product_id'].head(k).tolist()
 
+    def predict_numpy(self, rows):
+        """Pure Python/NumPy tree traversal inference.
+        Uses pre-extracted XGBoost tree structure (no xgboost C++ package needed).
+        """
+        if not hasattr(self, 'np_trees') or self.np_trees is None:
+            return np.zeros(len(rows))
+        trees = self.np_trees['trees']       # list of {nodeid: node_dict}
+        feat_map = self.np_trees['feat_map'] # feature_name -> row index
+
+        probs = []
+        for row in rows:
+            raw = 0.0
+            for node_idx in trees:
+                node = node_idx[0]  # root is always nodeid=0
+                while 'leaf' not in node:
+                    feat_i = feat_map[node['split']]
+                    val = row[feat_i]
+                    split_cond = node['split_condition']
+                    if isinstance(split_cond, list):
+                        # Categorical split: yes if val is in the category set
+                        next_id = node['yes'] if int(val) in split_cond else node['no']
+                    else:
+                        # Numeric split: yes if val < threshold
+                        next_id = node['yes'] if val < split_cond else node['no']
+                    node = node_idx[next_id]
+
+                raw += node['leaf']
+            prob = 1.0 / (1.0 + np.exp(-raw))
+            probs.append(prob)
+        return np.array(probs)
+
+    def extract_and_clear_model(self):
+        """Extract XGBoost decision trees to pure Python dicts for zero-dependency
+        cloud inference (no xgboost C++ package needed at serving time).
+        Mirrors the NeuralRecommender pattern: train locally, serve with numpy.
+        """
+        if self.model is not None:
+            import json
+            booster = self.model.get_booster()
+            dump = booster.get_dump(dump_format='json')
+            cols_order = [
+                'user_age', 'user_gender', 'user_loyalty',
+                'item_cocoa', 'item_weight', 'item_category', 'item_brand',
+                'store_type', 'day_of_week', 'month',
+                'user_total_purchases', 'user_avg_revenue', 'user_avg_discount',
+                'item_total_sales', 'item_avg_discount',
+                'user_item_purchase_count', 'user_brand_purchase_count', 'user_category_purchase_count'
+            ]
+            feat_map = {name: idx for idx, name in enumerate(cols_order)}
+            # Pre-index each tree by nodeid for O(depth) traversal at inference
+            indexed_trees = []
+            for tree_str in dump:
+                tree_root = json.loads(tree_str)
+                node_index = {}
+                stack = [tree_root]
+                while stack:
+                    n = stack.pop()
+                    node_index[n['nodeid']] = n
+                    for child in n.get('children', []):
+                        stack.append(child)
+                indexed_trees.append(node_index)
+            self.np_trees = {'trees': indexed_trees, 'feat_map': feat_map}
+            print(f"  Extracted {len(indexed_trees)} XGBoost trees → pure Python format (no xgb needed at inference).")
+        self.model = None  # Drop C++ object — not needed for cloud serving
+
+
     # Auxiliary variables to store profiles during fit
     def fit_extra(self, train_sales, products, customers, stores):
         # Store customer profiles for fast recommend lookup
         print("  Caching profile maps...")
         self.customer_profiles = {}
         for row in customers.itertuples(index=False):
+
             self.customer_profiles[row.customer_id] = {
                 'age': row.age if not pd.isna(row.age) else 35,
                 'gender': row.gender if not pd.isna(row.gender) else 'Unknown',

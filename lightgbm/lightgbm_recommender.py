@@ -206,7 +206,19 @@ class LightGBMRecommender(BaseRecommender):
         )
         self.model.fit(X, y)
         print("  LightGBM training complete.")
+        self.extract_and_clear_model()
  
+    def extract_and_clear_model(self):
+        """Extract decision tree structure to pure Python dicts for zero-dependency
+        cloud inference (no lightgbm C++ package needed at serving time).
+        Mirrors the NeuralRecommender pattern: train locally, serve with numpy.
+        """
+        if self.model is not None and hasattr(self.model, 'booster_'):
+            d = self.model.booster_.dump_model()
+            self.np_trees = [t['tree_structure'] for t in d['tree_info']]
+            print(f"  Extracted {len(self.np_trees)} LightGBM trees → pure Python format (no lgb needed at inference).")
+        self.model = None  # Drop C++ object — not needed for cloud serving
+
     def predict_numpy(self, rows):
         if not hasattr(self, 'np_trees') or self.np_trees is None:
             if hasattr(self.model, 'booster_'):
