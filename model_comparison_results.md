@@ -6,10 +6,10 @@
 
 | Algorithm | Precision@5 | Recall@5 | F1-Score@5 | HitRate@5 | Training Time (s) | Inference Latency |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Item-based CF | 1.04% | 2.87% | 1.53% | 5.20% | 1.53s | 0.19 ms/user |
-| XGBoost Ranking | 1.07% | 2.51% | 1.50% | 5.20% | 2.59s | 2.96 ms/user |
-| LightGBM Ranking | 1.15% | 2.65% | 1.60% | 5.70% | 2.50s | 3.09 ms/user |
-| Neural NCF | 0.84% | 1.99% | 1.18% | 4.15% | 3.59s | 0.50 ms/user |
+| Item-based CF | 1.04% | 2.87% | 1.53% | 5.20% | 1.61s | 0.19 ms/user |
+| XGBoost Ranking | 1.10% | 2.56% | 1.54% | 5.30% | 2.75s | 10.41 ms/user |
+| LightGBM Ranking | 1.09% | 2.57% | 1.53% | 5.35% | 2.53s | 15.20 ms/user |
+| Neural NCF | 0.91% | 2.01% | 1.25% | 4.45% | 3.65s | 0.45 ms/user |
 
 ## 2. 核心结论与商业决策建议
 
