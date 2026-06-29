@@ -1661,32 +1661,58 @@
             body.innerHTML = `
                 <div style="border-bottom: 1px solid var(--border-glow); padding-bottom: 1rem; margin-bottom: 1.5rem;">
                     <span style="color:var(--accent-gold); font-weight:700; font-size:0.85rem; text-transform:uppercase;">Deep Performance Attribution Analysis</span>
-                    <h2 style="color:var(--accent-gold); font-size:1.8rem; margin-top:0.3rem;"><i class="fa-solid fa-scale-balanced"></i> Benchmark Attribution: Why GBDT Trees Excel & Neural Lags?</h2>
+                    <h2 style="color:var(--accent-gold); font-size:1.8rem; margin-top:0.3rem;"><i class="fa-solid fa-scale-balanced"></i> Benchmark Attribution & Industrial Selection Cheat Sheet</h2>
                 </div>
                 <div style="font-size:0.98rem; line-height:1.8; color:var(--text-primary);">
                     <div style="background:rgba(212,175,55,0.1); padding:1.2rem; border-radius:12px; border:1px solid var(--border-glow); margin-bottom:1.5rem;">
                         <b style="color:var(--accent-gold); font-size:1.05rem;"><i class="fa-solid fa-circle-info"></i> Empirical Benchmark Perspective:</b><br/>
-                        In unified offline evaluation, <b>GBDT Tree Models (XGBoost / LightGBM)</b> achieved top accuracy with <b>Precision@5 = 1.10%</b> and <b>HitRate@5 = 5.35%</b>, while PyTorch-based <b>Neural NCF</b> scored Precision@5 of <b>0.91%</b>. This gap is not an anomaly, but a fundamental phenomenon in recommendation engineering!
+                        In unified offline evaluation, <b>XGBoost Ranking</b> achieved top accuracy with <b>Precision@5 = 1.10%</b> (F1=1.54%); <b>LightGBM Ranking</b> achieved top hit rate with <b>HitRate@5 = 5.35%</b>; PyTorch-based <b>Neural NCF</b> scored Precision@5 of <b>0.91%</b>, while <b>ItemCF</b> maintained sub-millisecond efficiency at <b>0.19 ms</b>.
                     </div>
 
-                    <h3 style="color:#e74c3c; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-triangle-exclamation"></i> 1. Why Deep Learning (Neural NCF) scores lower offline?</h3>
+                    <h3 style="color:#e74c3c; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-microscope"></i> 1. Why do model performances differ so significantly? (Mechanistic Breakdown)</h3>
                     <ul style="padding-left:1.2rem; margin-bottom:1.5rem; display:flex; flex-direction:column; gap:0.8rem;">
-                        <li><b>Tree Models Dominate Tabular Data</b>: In CTR estimation and tabular recommendation, GBDT tree models inherently outperform neural networks on structured features (demographics, cocoa percentage, aggregations) via efficient axis-aligned hyper-plane splits.</li>
-                        <li><b>Data Scale vs Model Parameter Capacity</b>: Neural NCF uses large Embedding matrices and MLP layers. Deep models require billions of data logs; on million-level offline datasets, they suffer from implicit overfitting or optimization challenges.</li>
+                        <li><b>🌲 XGBoost (Precision Champion - 1.10%)</b>: Utilizes a level-wise tree growth strategy. The resulting symmetric tree structures, combined with exact second-order gradient sampling and rigorous L1/L2 regularization, yield robust anti-overfitting capabilities and highly precise axis-aligned decision boundaries under Top-5 truncation.</li>
+                        <li><b>⚡ LightGBM (HitRate Champion - 5.35%)</b>: Utilizes a leaf-wise growth strategy with histogram binning. By prioritizing splits with maximum loss reduction, it explores high-gain micro-subspaces deeply, producing a more spread probability distribution that maximizes the <b>HitRate of catching at least one relevant item</b>.</li>
+                        <li><b>🧠 Neural NCF (Deep Generalization & Embeddings)</b>: Relies on Embedding lookups and MLPs. On structured tabular features, neural networks lack the axis-aligned partition efficiency of GBDT trees and suffer mild overfitting on million-level offline data, yet provide unmatched generalization for non-explicit item similarities.</li>
+                        <li><b>🔗 ItemCF (Co-occurrence Retrieval Powerhouse)</b>: Pure physical transaction co-occurrence matrix without machine learning overhead. Delivers high Recall in <b>0.19 ms</b>, making it the ideal Stage-1 retrieval engine.</li>
                     </ul>
 
-                    <h3 style="color:#2ecc71; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-trophy"></i> 2. Why GBDT tree models win the ranking championship?</h3>
-                    <ul style="padding-left:1.2rem; margin-bottom:1.5rem; display:flex; flex-direction:column; gap:0.8rem;">
-                        <li><b>Leaf-wise Splitting Advantage</b>: Unlike traditional level-wise XGBoost, LightGBM splits nodes by maximum loss reduction, capturing complex non-linear feature interactions at shallower tree depths.</li>
-                        <li><b>Native Categorical Handling</b>: LightGBM handles high-cardinality brand and category features directly via internal histogram binning without expensive one-hot expansion.</li>
-                    </ul>
-
-                    <h3 style="color:#3498db; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-bolt"></i> 3. Why ItemCF remains ultra-fast with high Recall?</h3>
-                    <p style="margin-bottom:1.5rem;">ItemCF relies purely on historical purchase co-occurrence matrices. Repeat purchases of dark chocolate complement items reliably with <b>0.19 ms latency</b>, making it the ideal Stage-1 retrieval engine!</p>
-
-                    <h3 style="color:var(--accent-gold); margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-lightbulb"></i> 4. 💡 Real Industrial Role: Two-Stage Funnel Pipeline</h3>
-                    <p>In large-scale production systems, Neural NCF is utilized as a <b>Dense Embedding Provider</b> for ANN vector search. Thus, our architecture combines <b>"ItemCF/Neural Retrieval + LightGBM Ranking"</b> for the optimal commercial solution!</p>
+                    <h3 style="color:#2ecc71; margin:1.5rem 0 0.8rem 0; font-size:1.3rem;"><i class="fa-solid fa-compass"></i> 2. 💡 Industrial Recommender System Cheat Sheet</h3>
+                    <div style="overflow-x:auto; margin-bottom:1.5rem;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.88rem; text-align:left; background:rgba(0,0,0,0.3); border-radius:8px; overflow:hidden;">
+                            <thead>
+                                <tr style="background:rgba(212,175,55,0.2); color:var(--accent-gold);">
+                                    <th style="padding:0.6rem 0.8rem;">Use Case / Constraints</th>
+                                    <th style="padding:0.6rem 0.8rem;">Recommended Algorithm</th>
+                                    <th style="padding:0.6rem 0.8rem;">Key Advantage & Reasoning</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding:0.6rem 0.8rem;"><b>Massive SKUs + Hard Real-Time Retrieval (＜1ms)</b></td>
+                                    <td style="padding:0.6rem 0.8rem; color:#2ecc71; font-weight:700;">ItemCF / UserCF</td>
+                                    <td style="padding:0.6rem 0.8rem;">Zero model inference overhead, direct lookup table, maximum stability & ROI</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding:0.6rem 0.8rem;"><b>Tabular Features (Demographics, Aggregates) Ranking</b></td>
+                                    <td style="padding:0.6rem 0.8rem; color:#f39c12; font-weight:700;">LightGBM / XGBoost</td>
+                                    <td style="padding:0.6rem 0.8rem;">Gold standard for tabular data; fast training, high accuracy, low engineering friction</td>
+                                </tr>
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding:0.6rem 0.8rem;"><b>Multi-Modal (Text/Image) + Cold Start Search</b></td>
+                                    <td style="padding:0.6rem 0.8rem; color:#3498db; font-weight:700;">Neural NCF / Two-Tower</td>
+                                    <td style="padding:0.6rem 0.8rem;">Dense embedding representation power; pairs with Milvus/FAISS ANN search</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:0.6rem 0.8rem;"><b>Enterprise High-Throughput Production Pipeline</b></td>
+                                    <td style="padding:0.6rem 0.8rem; color:var(--accent-gold); font-weight:700;">Two-Stage Funnel Pipeline</td>
+                                    <td style="padding:0.6rem 0.8rem;">ItemCF/Vector Retrieval Top100 + GBDT Ranking Top5; optimal accuracy & latency balance</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+ 
             `;
             overlay.classList.add('active');
         }
