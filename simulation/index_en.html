@@ -532,10 +532,11 @@
                     <label>Recommendation Pipeline</label>
                     <div class="algo-selector">
                         <button class="algo-btn active" id="btn-hybrid" onclick="selectAlgo('hybrid')">🔥 Two-Stage (CF+LGBM)</button>
-                        <button class="algo-btn" id="btn-lgb" onclick="selectAlgo('lightgbm')">LightGBM</button>
-                        <button class="algo-btn" id="btn-xgb" onclick="selectAlgo('xgboost')">XGBoost</button>
-                        <button class="algo-btn" id="btn-cf" onclick="selectAlgo('itemcf')">ItemCF</button>
-                        <button class="algo-btn" id="btn-mba" onclick="selectAlgo('mba')">Association Rules (MBA)</button>
+                        <button class="algo-btn" id="btn-lgb" onclick="selectAlgo('lightgbm')">🌲 LightGBM</button>
+                        <button class="algo-btn" id="btn-xgb" onclick="selectAlgo('xgboost')">🚀 XGBoost</button>
+                        <button class="algo-btn" id="btn-neural" onclick="selectAlgo('neural')">🧠 Neural NCF</button>
+                        <button class="algo-btn" id="btn-cf" onclick="selectAlgo('itemcf')">👥 ItemCF</button>
+                        <button class="algo-btn" id="btn-mba" onclick="selectAlgo('mba')">🛒 Association Rules (MBA)</button>
                     </div>
                 </div>
 
@@ -716,6 +717,12 @@
                 desc: "Global item association mining using Apriori lift rules. Evaluates 'Item A -> Item B' transaction occurrences globally. Perfect for shopping cart cross-selling recommendations.",
                 pros: "Perfect for checkout cross-selling, basket add-ons, or gift bundle upsells. Highly effective when paired with promotional copywriting.",
                 cons: "Entirely blind to customer demographic profiles (age, gender); fully dependent on historical co-occurrence frequencies."
+            },
+            neural: {
+                title: "🧠 PyTorch Neural NCF Model",
+                desc: "Neural Collaborative Filtering model based on deep learning. Leverages dense embedding lookup tables and Multi-Layer Perceptron (MLP) layers to extract non-linear user-item interactions.",
+                pros: "Strong representation capability; excels at generalizing dense continuous latent embedding mappings for sparse discrete categorical IDs.",
+                cons: "Lacks the axis-aligned partition efficiency of GBDTs on structured tabular features; prone to minor overfitting on small datasets."
             }
         };
 
@@ -725,6 +732,7 @@
             if (model === 'hybrid') document.getElementById('btn-hybrid').classList.add('active');
             if (model === 'lightgbm') document.getElementById('btn-lgb').classList.add('active');
             if (model === 'xgboost') document.getElementById('btn-xgb').classList.add('active');
+            if (model === 'neural') document.getElementById('btn-neural').classList.add('active');
             if (model === 'itemcf') document.getElementById('btn-cf').classList.add('active');
             if (model === 'mba') document.getElementById('btn-mba').classList.add('active');
             

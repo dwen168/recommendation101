@@ -547,10 +547,11 @@
                     <label>选择推荐架构</label>
                     <div class="algo-selector">
                         <button class="algo-btn active" id="btn-hybrid" onclick="selectAlgo('hybrid')">🔥 工业双级 (CF+LGBM)</button>
-                        <button class="algo-btn" id="btn-lgb" onclick="selectAlgo('lightgbm')">LightGBM</button>
-                        <button class="algo-btn" id="btn-xgb" onclick="selectAlgo('xgboost')">XGBoost</button>
-                        <button class="algo-btn" id="btn-cf" onclick="selectAlgo('itemcf')">ItemCF</button>
-                        <button class="algo-btn" id="btn-mba" onclick="selectAlgo('mba')">关联规则 (MBA)</button>
+                        <button class="algo-btn" id="btn-lgb" onclick="selectAlgo('lightgbm')">🌲 LightGBM</button>
+                        <button class="algo-btn" id="btn-xgb" onclick="selectAlgo('xgboost')">🚀 XGBoost</button>
+                        <button class="algo-btn" id="btn-neural" onclick="selectAlgo('neural')">🧠 Neural NCF (神经网络)</button>
+                        <button class="algo-btn" id="btn-cf" onclick="selectAlgo('itemcf')">👥 ItemCF</button>
+                        <button class="algo-btn" id="btn-mba" onclick="selectAlgo('mba')">🛒 关联规则 (MBA)</button>
                     </div>
                 </div>
 
@@ -757,6 +758,12 @@
                 desc: "经典的市场篮子分析算法（Apriori/提升度分析）。根据全局顾客的购物篮，挖掘出“巧克力 A + 巧克力 B”的高频伴随规则。基于该规则做交叉搭售。",
                 pros: "天然适合购物车、结账台的“搭配换购”交叉销售场景，极易通过文案提高转化率。",
                 cons: "完全与顾客的人口学画像（年龄、性别）无关；极度依赖历史共现频次，对冷启动新访客完全失效。"
+            },
+            neural: {
+                title: "🧠 PyTorch Neural NCF 模型",
+                desc: "基于深度学习的神经协同过滤模型 (Neural Collaborative Filtering)。利用 Embedding 连续隐向量与多层感知机 (MLP) 捕捉用户与商品间的深层非线性关联。",
+                pros: "特征表达与泛化能力强，能精细化学习稀疏 ID 的高维连续向量表示。",
+                cons: "由于神经网络对表格化特征没有 GBDT 的轴对齐分割效率，且在小样本上训练时容易发生轻微过拟合。"
             }
         };
 
@@ -766,6 +773,7 @@
             if (model === 'hybrid') document.getElementById('btn-hybrid').classList.add('active');
             if (model === 'lightgbm') document.getElementById('btn-lgb').classList.add('active');
             if (model === 'xgboost') document.getElementById('btn-xgb').classList.add('active');
+            if (model === 'neural') document.getElementById('btn-neural').classList.add('active');
             if (model === 'itemcf') document.getElementById('btn-cf').classList.add('active');
             if (model === 'mba') document.getElementById('btn-mba').classList.add('active');
             
